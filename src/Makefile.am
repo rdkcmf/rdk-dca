@@ -17,9 +17,11 @@
 # limitations under the License.
 ##########################################################################
 SUBDIRS =
-bin_PROGRAMS = dcafind dcaseek dcaloadave dcaprocess ipvideo
+bin_PROGRAMS = dcafind dcaseek dcaloadave dcaprocess ipvideo dcamem dcacpu
 dcafind_SOURCES = loggrep.c
 dcaseek_SOURCES = logredirect.c
 dcaloadave_SOURCES = dcaloadave.c
 dcaprocess_SOURCES = dcaprocess.cpp
 ipvideo_SOURCES = ipvideo.c
+dcamem_SOURCES = dcamem.c
+dcacpu_SOURCES = dcacpu.c

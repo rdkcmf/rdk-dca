@@ -21,18 +21,24 @@ all:src/loggrep.c
 	$(CC)  src/loggrep.c -o dcafind
 	$(CC)  src/logredirect.c -o dcaseek
 	$(CC)  src/dcaloadave.c -o dcaloadave
+	$(CC)  src/dcamem.c -o dcamem
+	$(CC)  src/dcacpu.c -o dcacpu
 	$(CC)  src/ipvideo.c -o ipvideo
 	$(GXX) $(CFLAGS) src/dcaprocess.cpp -o dcaprocess
 build:src/loggrep.c
 	$(CC)  src/loggrep.c -o dcafind
 	$(CC)  src/logredirect.c -o dcaseek
 	$(CC)  src/dcaloadave.c -o dcaloadave
+	$(CC)  src/dcamem.c -o dcamem
+	$(CC)  src/dcacpu.c -o dcacpu
 	$(CC)  src/ipvideo.c -o ipvideo
 	$(GXX) $(CFLAGS) src/dcaprocess.cpp -o dcaprocess
 clean:
 	$(RM) dcafind
 	$(RM) dcaseek
 	$(RM) dcaloadave
+	$(RM) dcamem
+	$(RM) dcacpu
 	$(RM) dcaprocess
 	$(RM) ipvideo
 
