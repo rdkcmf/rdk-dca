@@ -41,11 +41,21 @@
 #include <sys/stat.h>
 #include <fcntl.h>           /* Definition of AT_* constants */
 #include <unistd.h>
+#include <unistd.h>
+#include <ios>
+#include <fstream>
+#include <string>
+#include <cstring>
+#include <cstdlib>
 
 #define LEN 14
 #define BUF_LEN 16
 #define CMD_LEN 256
 #define MAXLEN 512
+#define PID_SIZE 10
+#define PIDOF_SIZE 50
+#define MEM_STRING_SIZE 20
+#define PROC_PATH_SIZE 50
 
 using namespace std;
 
@@ -92,6 +102,65 @@ int main(int argc,char *argv[]) {
     return 1;
 }
 
+/** @description: To get the reserve memory of a given process.
+ *  @parm pInfo - process name .
+ *  @return reserve memory of the requested process.
+ */
+char* getResidentMemory(procMemCpuInfo *pInfo)
+{
+   using std::ios_base;
+   using std::ifstream;
+   using std::string;
+   char *processName = NULL;
+   char pidofCommand[PIDOF_SIZE];
+   char pidTempArray[PID_SIZE];
+   char procPath[PROC_PATH_SIZE];
+   static char retMem[MEM_STRING_SIZE];
+   FILE *cmdPid;
+   int intStr = 0,intValue = 0;
+   unsigned long vsize;
+   long rss;
+   double residentMemory = 0.0;
+
+   /* Get the PID value */
+   processName = pInfo->processName;
+   sprintf(pidofCommand, "pidof %s", processName);
+   cmdPid = popen(pidofCommand, "r");
+   fgets(pidTempArray, PID_SIZE, cmdPid);
+   pid_t pidP = strtoul(pidTempArray, NULL, PID_SIZE);
+   pclose(cmdPid);
+
+   /* Set procPath */
+   sprintf (procPath, "/proc/%d/stat",pidP);
+
+   /* Get file status */
+   ifstream stat_stream(procPath,ios_base::in);
+
+   string pid, comm, state, ppid, pgrp, session, tty_nr;
+   string tpgid, flags, minflt, cminflt, majflt, cmajflt;
+   string utime, stime, cutime, cstime, priority, nice;
+   string O, itrealvalue, starttime;
+
+   stat_stream >> pid >> comm >> state >> ppid >> pgrp >> session >> tty_nr
+               >> tpgid >> flags >> minflt >> cminflt >> majflt >> cmajflt
+               >> utime >> stime >> cutime >> cstime >> priority >> nice
+               >> O >> itrealvalue >> starttime >> vsize >> rss;
+
+   stat_stream.close();
+
+   long pageSizeInKb = sysconf(_SC_PAGE_SIZE) / 1024; /* x86-64 is configured to use 2MB pages */
+   residentMemory = rss * pageSizeInKb;
+   intStr = (int)residentMemory;
+   intValue = intStr;
+   if (intValue >= 1024)
+      intStr = intStr/1024;
+   snprintf(retMem, sizeof(retMem), "%d", intStr);
+   if (intValue >= 1024)
+      strcat(retMem,"m");
+   else
+      strcat(retMem,"k");
+   return retMem;
+}
 
 bool getProcInfo(procMemCpuInfo *pInfo)
 {
@@ -139,30 +208,22 @@ bool getProcInfo(procMemCpuInfo *pInfo)
 
  //  2268 root      20   0  831m  66m  20m S   27 13.1 491:06.82 Receiver
 #ifdef INTEL
-
     if (fscanf(inFp,"%s %s %s %s %s %s %s %s", var1, var2, var3, var4, var5, var6, var7, var8) == 8) {                           
-        pmem = var5;
         pcpu = var7;
-        
 	}
 //#endif
-
 #else
-
 //while(fscanf(inFp,"%s %s", var1, var2) == 2)
 //    {
 //	    pcpu = var1;
 //	    pmem = var2;
  //   }
- 
   if (fscanf(inFp,"%s %s %s %s %s %s %s %s %s %s", var1, var2, var3, var4, var5, var6, var7, var8, var9, var10) == 10) {                           
-        pmem = var6;
         pcpu = var9;
-        
 	}
-
-
-#endif         
+#endif
+    /* Get the resident memory value. Take from proc/$pid/stats */
+    pmem = getResidentMemory(pInfo);
 
     if ((pcpu != NULL) && (pmem != NULL)) {
         strncpy(pInfo->cpuUse, pcpu, strlen(pcpu)+1);
