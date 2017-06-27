@@ -54,6 +54,7 @@ int main()
 	 }
 	 str[LEN] = '\0';
 	 printf("{\"Load_Average\":\"%s\"}", str);
+	 fclose(fp);
 	 return 0;
 }
 

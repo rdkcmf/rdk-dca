@@ -38,7 +38,9 @@
 #include<stdio.h>
 #include<string.h>
 #include<stdlib.h>
+#include <unistd.h>
 
+#define SLEEP_USEC 100
 
 static char *PERSISTENT_PATH = NULL;
 static char *LOG_PATH = NULL;
@@ -52,6 +54,7 @@ int Search_in_File(FILE *fp, FILE *ptr_file) {
 
 	while (fgets(temp, 1024, fp) != NULL ) {
 		fputs(temp, ptr_file);
+		usleep(SLEEP_USEC);
 	}
 	return (0);
 }
@@ -132,6 +135,12 @@ int main(int argc, char *argv[]) {
             strcat(seekFile,"/.telemetry/tmp/rtl_");
             strcpy(logFolder, LOG_PATH );
             strcat(logFolder,"/");
+	    if (PERSISTENT_PATH) {
+	    	free(PERSISTENT_PATH);
+	    }
+	    if (LOG_PATH) {
+	    	free(LOG_PATH );
+	    }
 
         } else { 
             // Let us not disturb the fielded RDK-V devices for time being
@@ -211,6 +220,11 @@ int main(int argc, char *argv[]) {
 				}
 
 				fclose(openLogFile);
+
+                                if(temp_file != NULL){
+                                        fclose(temp_file);
+                                }
+
 
 
 			} else {

@@ -71,7 +71,8 @@ int getMemoryUsage(char *memoryUtilization)
 	long long  memTotal = 0;
 	long long  memFree = 0;
 	long long  memoryInUse=0;
-
+	int Total_flag = 0;
+	int Free_flag = 0;
 
 	/* Open /proc/cpuinfo file*/
 	if ((memoryinfo = fopen("/proc/meminfo", "r")) == NULL)
@@ -88,20 +89,17 @@ int getMemoryUsage(char *memoryUtilization)
 		{
 			sscanf(line, "%*s %s", tmp);
 			memTotal = atoll(tmp);
-			break;
+			Total_flag = 1;
 		}
-	}
-
-	/* Search until the "MemFree" entry is found*/
-	while(fgets(line, MAXLEN, memoryinfo))
-	{
-		sscanf(line, "%s", tmp);
-		if((strcmp(tmp,"MemFree:") == 0))
+		else if((strcmp(tmp,"MemFree:") == 0))
 		{
 			sscanf(line, "%*s %s", tmp);
 			memFree = atoll(tmp);
-			break;
+			Free_flag = 1;
 		}
+		if (Total_flag == 1 && Free_flag == 1) {
+			break;
+		}		
 	}
 
 	fclose(memoryinfo);

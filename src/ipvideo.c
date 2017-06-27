@@ -38,6 +38,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+
+#define SLEEP_USEC 100
 
 int Search_in_File(char *fname, char *str) {
 
@@ -59,8 +62,10 @@ int Search_in_File(char *fname, char *str) {
             strncpy (temp2, (strFound+length), 1023);
             temp2[1023] = '\0'; //For Boundary Safety
         }
+	usleep(SLEEP_USEC);
     }
     printf ("%s", (temp2));
+    fclose(fp);
 	return 0;
 }
 
