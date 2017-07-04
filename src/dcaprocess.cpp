@@ -111,9 +111,14 @@ bool getProcInfo(procMemCpuInfo *pInfo)
     }
 
 #ifdef INTEL
-    /* Format Use:  `top n 1 | grep Receiver` */
+    #ifdef YOCTO_BUILD
+        /* Format Use:  `top -b -n 1 | grep Receiver` */
+        sprintf(command, "top -b -n 1 | grep -i '%s'", pInfo->processName);
+    #else
+        /* Format Use:  `top -n 1 | grep Receiver` */
+        sprintf(command, "top -n 1 | grep -i '%s'", pInfo->processName);
+    #endif
 
-    sprintf(command, "top -n 1 | grep -i '%s'", pInfo->processName);
 #else 
      /* ps -C Receiver -o %cpu -o %mem */
     //sprintf(command, "ps -C '%s' -o %%cpu -o %%mem | sed 1d", pInfo->processName);
