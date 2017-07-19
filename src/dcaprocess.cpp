@@ -106,32 +106,20 @@ int main(int argc,char *argv[]) {
  *  @parm pInfo - process name .
  *  @return reserve memory of the requested process.
  */
-char* getResidentMemory(procMemCpuInfo *pInfo)
+char* getResidentMemory(procMemCpuInfo *pInfo, int* processPid)
 {
    using std::ios_base;
    using std::ifstream;
    using std::string;
-   char *processName = NULL;
-   char pidofCommand[PIDOF_SIZE];
-   char pidTempArray[PID_SIZE];
    char procPath[PROC_PATH_SIZE];
    static char retMem[MEM_STRING_SIZE];
-   FILE *cmdPid;
    int intStr = 0,intValue = 0;
    unsigned long vsize;
    long rss;
    double residentMemory = 0.0;
 
-   /* Get the PID value */
-   processName = pInfo->processName;
-   sprintf(pidofCommand, "pidof %s", processName);
-   cmdPid = popen(pidofCommand, "r");
-   fgets(pidTempArray, PID_SIZE, cmdPid);
-   pid_t pidP = strtoul(pidTempArray, NULL, PID_SIZE);
-   pclose(cmdPid);
-
    /* Set procPath */
-   sprintf (procPath, "/proc/%d/stat",pidP);
+   sprintf (procPath, "/proc/%d/stat", *processPid);
 
    /* Get file status */
    ifstream stat_stream(procPath,ios_base::in);
@@ -178,16 +166,27 @@ bool getProcInfo(procMemCpuInfo *pInfo)
     char var8[512]= {'\0'};
     char var9[512]= {'\0'}; 
     char var10[512]= {'\0'};          
+    int pid = 0;
 
     if (pInfo == NULL) {
 
         return false;    
     }
 
+    sprintf(command, "pidof %s", pInfo->processName);
+    if(!(inFp = popen(command, "r"))){
+        return false;
+    }
+    fscanf(inFp,"%d",&pid);
+    pclose(inFp);
+    if( pid == 0) {
+        return false;
+    }
+
 #ifdef INTEL
     #ifdef YOCTO_BUILD
         /* Format Use:  `top -b -n 1 | grep Receiver` */
-        sprintf(command, "top -b -n 1 | grep -i '%s'", pInfo->processName);
+        sprintf(command, "top -b -n 1 | sed  's/^[ \t]*//' | grep \"^%d\"", pid);
     #else
         /* Format Use:  `top -n 1 | grep Receiver` */
         sprintf(command, "top -n 1 | grep -i '%s'", pInfo->processName);
@@ -223,7 +222,7 @@ bool getProcInfo(procMemCpuInfo *pInfo)
 	}
 #endif
     /* Get the resident memory value. Take from proc/$pid/stats */
-    pmem = getResidentMemory(pInfo);
+    pmem = getResidentMemory(pInfo, &pid);
 
     if ((pcpu != NULL) && (pmem != NULL)) {
         strncpy(pInfo->cpuUse, pcpu, strlen(pcpu)+1);
