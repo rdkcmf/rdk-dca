@@ -50,11 +50,6 @@ dnl AC_CHECK_HEADER_STDBOOL
 AC_TYPE_UINT8_T
 dnl Checks for library functions.
 AC_FUNC_MALLOC
-
-PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.24.0])
-PKG_CHECK_MODULES([LIBCJSON], [libcjson >= 1.0])
-
-
 AC_CONFIG_FILES([Makefile
                  src/Makefile])
 AC_OUTPUT
