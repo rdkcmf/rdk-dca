@@ -114,30 +114,22 @@ char* getResidentMemory(procMemCpuInfo *pInfo, int* processPid)
    char procPath[PROC_PATH_SIZE];
    static char retMem[MEM_STRING_SIZE];
    int intStr = 0,intValue = 0;
-   unsigned long vsize;
-   long rss;
-   double residentMemory = 0.0;
-
-   /* Set procPath */
-   sprintf (procPath, "/proc/%d/stat", *processPid);
-
-   /* Get file status */
-   ifstream stat_stream(procPath,ios_base::in);
-
-   string pid, comm, state, ppid, pgrp, session, tty_nr;
-   string tpgid, flags, minflt, cminflt, majflt, cmajflt;
-   string utime, stime, cutime, cstime, priority, nice;
-   string O, itrealvalue, starttime;
-
-   stat_stream >> pid >> comm >> state >> ppid >> pgrp >> session >> tty_nr
-               >> tpgid >> flags >> minflt >> cminflt >> majflt >> cmajflt
-               >> utime >> stime >> cutime >> cstime >> priority >> nice
-               >> O >> itrealvalue >> starttime >> vsize >> rss;
-
-   stat_stream.close();
-
    long pageSizeInKb = sysconf(_SC_PAGE_SIZE) / 1024; /* x86-64 is configured to use 2MB pages */
-   residentMemory = rss * pageSizeInKb;
+
+   /* Use /proc/<pid>/statm (see man page for proc)
+    * statm is made up of size, resident, shared, text, lib, data
+    * and dt columns.
+    * We only require resident memory, so read the 1st 2 columns.
+    */
+   /* Set procPath */
+   sprintf (procPath, "/proc/%d/statm", *processPid);
+
+   ifstream statm(procPath);
+   int totalMemory, residentMemory;
+   statm >> totalMemory >> residentMemory;
+   statm.close();
+
+   residentMemory *= pageSizeInKb;
    intStr = (int)residentMemory;
    intValue = intStr;
    if (intValue >= 1024)
@@ -235,48 +227,13 @@ bool getProcInfo(procMemCpuInfo *pInfo)
 
 }
 #else //ENABLE_XCAM_SUPPORT
-typedef struct statstruct_proc {
-  int           pid;                      /** The process id. **/
-  char          exName [CMD_LEN]; /** The filename of the executable **/
-  char          state; /** 1 **/          /** R is running, S is sleeping,
-			   D is sleeping in an uninterruptible wait,
-			   Z is zombie, T is traced or stopped **/
-  unsigned      euid,                      /** effective user id **/
-                egid;                      /** effective group id */
-  int           ppid;                     /** The pid of the parent. **/
-  int           pgrp;                     /** The pgrp of the process. **/
-  int           session;                  /** The session id of the process. **/
-  int           tty;                      /** The tty the process uses **/
-  int           tpgid;                    /** (too long) **/
-  unsigned int	flags;                    /** The flags of the process. **/
-  unsigned int	minflt;                   /** The number of minor faults **/
-  unsigned int	cminflt;                  /** The number of minor faults with childs **/
-  unsigned int	majflt;                   /** The number of major faults **/
-  unsigned int  cmajflt;                  /** The number of major faults with childs **/
-  int           utime;                    /** user mode jiffies **/
-  int           stime;                    /** kernel mode jiffies **/
-  int		cutime;                   /** user mode jiffies with childs **/
-  int           cstime;                   /** kernel mode jiffies with childs **/
-  int           counter;                  /** process's next timeslice **/
-  int           priority;                 /** the standard nice value, plus fifteen **/
-  unsigned int  timeout;                  /** The time in jiffies of the next timeout **/
-  unsigned int  itrealvalue;              /** The time before the next SIGALRM is sent to the process **/
-  int           starttime; /** 20 **/     /** Time the process started after system boot **/
-  unsigned int  vsize;                    /** Virtual memory size **/
-  unsigned int  rss;                      /** Resident Set Size **/
-  unsigned int  rlim;                     /** Current limit in bytes on the rss **/
-  unsigned int  startcode;                /** The address above which program text can run **/
-  unsigned int	endcode;                  /** The address below which program text can run **/
-  unsigned int  startstack;               /** The address of the start of the stack **/
-  unsigned int  kstkesp;                  /** The current value of ESP **/
-  unsigned int  kstkeip;                 /** The current value of EIP **/
-  int		signal;                   /** The bitmap of pending signals **/
-  int           blocked; /** 30 **/       /** The bitmap of blocked signals **/
-  int           sigignore;                /** The bitmap of ignored signals **/
-  int           sigcatch;                 /** The bitmap of catched signals **/
-  unsigned int  wchan;  /** 33 **/        /** (too long) **/
-  int		sched, 		  /** scheduler **/
-                sched_priority;		  /** scheduler priority **/
+typedef struct proc_info {
+  /* See man page for proc for details of fields. */
+  int           utime;
+  int           stime;
+  int           cutime;
+  int           cstime;
+  unsigned int  vsize;
 } procinfo;
 
 /** @description: To get process information of the process.
@@ -290,6 +247,10 @@ bool getProcInfo(int pid, procinfo * pinfo)
 	char szFileName [CMD_LEN],szStatStr [2048],*s, *t;
 	FILE *fp;
 	struct stat st;
+	int ppid, pgrp, session, tty, tpgid, counter, priority, starttime, signal, blocked, sigignore, sigcatch;
+	char exName [CMD_LEN], state;
+	unsigned euid, egid;
+	unsigned int flags, minflt, cminflt, majflt, cmajflt, timeout, itrealvalue, vsize, rlim, startcode, endcode, startstack, kstkesp, kstkeip, wchan, rss; 
 
 	if (NULL == pinfo)
 	{
@@ -307,12 +268,12 @@ bool getProcInfo(int pid, procinfo * pinfo)
 
 	if (-1 != stat (szFileName, &st))
 	{
-		pinfo->euid = st.st_uid;
-		pinfo->egid = st.st_gid;
+		euid = st.st_uid;
+		egid = st.st_gid;
 	} 
 	else
 	{
-		pinfo->euid = pinfo->egid = -1;
+	euid = egid = -1;
 	}
 
 	if ((fp = fopen (szFileName, "r")) == NULL)
@@ -327,46 +288,21 @@ bool getProcInfo(int pid, procinfo * pinfo)
 	}
 
 	/** pid **/
-	sscanf (szStatStr, "%u", &(pinfo->pid));
 	s = strchr (szStatStr, '(') + 1;
 	t = strchr (szStatStr, ')');
-	strncpy (pinfo->exName, s, t - s);
-	pinfo->exName [t - s] = '\0';
+	strncpy (exName, s, t - s);
+	exName [t - s] = '\0';
 
+	/* Refer to /proc/[pid]/stat from proc man-page.*/
 	sscanf (t + 2, "%c %d %d %d %d %d %u %u %u %u %u %d %d %d %d %d %d %u %u %d %u %u %u %u %u %u %u %u %d %d %d %d %u",
 	/*       1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33*/
-	&(pinfo->state),
-	&(pinfo->ppid),
-	&(pinfo->pgrp),
-	&(pinfo->session),
-	&(pinfo->tty),
-	&(pinfo->tpgid),
-	&(pinfo->flags),
-	&(pinfo->minflt),
-	&(pinfo->cminflt),
-	&(pinfo->majflt),
-	&(pinfo->cmajflt),
-	&(pinfo->utime),
-	&(pinfo->stime),
-	&(pinfo->cutime),
-	&(pinfo->cstime),
-	&(pinfo->counter),
-	&(pinfo->priority),
-	&(pinfo->timeout),
-	&(pinfo->itrealvalue),
-	&(pinfo->starttime),
-	&(pinfo->vsize),
-	&(pinfo->rss),
-	&(pinfo->rlim),
-	&(pinfo->startcode),	  &(pinfo->endcode),
-	&(pinfo->startstack),
-	&(pinfo->kstkesp),
-	&(pinfo->kstkeip),
-	&(pinfo->signal),
-	&(pinfo->blocked),
-	&(pinfo->sigignore),
-	&(pinfo->sigcatch),
-	&(pinfo->wchan));
+		&(state), &(ppid), &(pgrp), &(session), &(tty), &(tpgid), &(flags),
+		&(minflt), &(cminflt), &(majflt), &(cmajflt), &(pinfo->utime),
+		&(pinfo->stime), &(pinfo->cutime), &(pinfo->cstime), &(counter),
+		&(priority), &(timeout), &(itrealvalue), &(starttime),
+		&(pinfo->vsize), &(rss), &(rlim), &(startcode), &(endcode),
+		&(startstack), &(kstkesp), &(kstkeip), &(signal), &(blocked),
+		&(sigignore), &(sigcatch), &(wchan));
 
 	fclose (fp);
 
