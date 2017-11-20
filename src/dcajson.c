@@ -31,7 +31,6 @@ int printJson(cJSON *root)
       char *out = cJSON_PrintUnformatted(root);
       if (NULL != out) {
         printf("%s\n", out);
-        LOG("%s", out);
         free(out);
       }
     }
