@@ -20,7 +20,7 @@
 <environment>
   <components>
     <dca>
-     <dependencies> sdk</dependencies>
+     <dependencies> sdk, opensource</dependencies>
       <is_coverity_supported>True</is_coverity_supported>
       <arguments>-v</arguments>
     </dca>

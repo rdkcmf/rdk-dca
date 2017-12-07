@@ -17,28 +17,37 @@
 # limitations under the License.
 ##########################################################################
 
-all:src/loggrep.c
-	$(CC)  src/loggrep.c -o dcafind
-	$(CC)  src/logredirect.c -o dcaseek
-	$(CC)  src/dcaloadave.c -o dcaloadave
+INCLUDE = -Isrc \
+	  -I$(GLIB_HEADER_PATH) \
+	  -I$(GLIB_HEADER_PATH)/include \
+	  -I$(GLIB_CONFIG_PATH)/glib-2.0/include \
+	  -I$(RDK_PROJECT_ROOT_PATH)/opensource/include \
+	  -I$(RDK_PROJECT_ROOT_PATH)/opensource/include/glib-2.0 \
+	  -I$(RDK_PROJECT_ROOT_PATH)/opensource/lib/glib-2.0/include \
+	  -I$(RDK_PROJECT_ROOT_PATH)/opensource/src/cjson \
+	  -I$(RDK_PROJECT_ROOT_PATH)/opensource/usr/local/include/cjson \
+	  -I$(RDK_PROJECT_ROOT_PATH)/opensource/cjson \
+	  -I$(RDK_PROJECT_ROOT_PATH)/opensource/lib/glib-2.0/include \
+	  -I$(COMMON_HEADER_PATH)
+
+LIBS += -L$(GLIB_CONFIG_PATH) \
+	-L$(RDK_PROJECT_ROOT_PATH)/opensource/lib \
+	-L$(RDK_PROJECT_ROOT_PATH)/opensource/usr/local/lib \
+	$(GLIBS) -lcjson
+
+LDFLAGS += $(LIBS)
+CFLAGS += $(INCLUDE)
+
+all:src/dca.c
+	$(CC) $(CFLAGS) $(LDFLAGS)  src/dca.c src/dcalist.c src/dcajson.c src/dcaproc.c src/dcautils.c -o dca
 	$(CC)  src/dcamem.c -o dcamem
 	$(CC)  src/dcacpu.c -o dcacpu
-	$(CC)  src/ipvideo.c -o ipvideo
-	$(GXX) $(CFLAGS) src/dcaprocess.cpp -o dcaprocess
-build:src/loggrep.c
-	$(CC)  src/loggrep.c -o dcafind
-	$(CC)  src/logredirect.c -o dcaseek
-	$(CC)  src/dcaloadave.c -o dcaloadave
+build:src/dca.c
+	$(CC) $(CFLAGS) $(LDFLAGS) src/dca.c src/dcalist.c src/dcajson.c src/dcaproc.c src/dcautils.c -o dca
 	$(CC)  src/dcamem.c -o dcamem
 	$(CC)  src/dcacpu.c -o dcacpu
-	$(CC)  src/ipvideo.c -o ipvideo
-	$(GXX) $(CFLAGS) src/dcaprocess.cpp -o dcaprocess
 clean:
-	$(RM) dcafind
-	$(RM) dcaseek
-	$(RM) dcaloadave
 	$(RM) dcamem
 	$(RM) dcacpu
-	$(RM) dcaprocess
-	$(RM) ipvideo
+	$(RM) dca
 

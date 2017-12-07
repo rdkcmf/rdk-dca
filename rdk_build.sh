@@ -101,13 +101,9 @@ function clean()
 function build()
 {
 
-        cd .
-        sh $DCA_PATH/build.sh build
-       cp $DCA_PATH/dcaseek $RDK_FSROOT_PATH/usr/bin/
-       cp $DCA_PATH/dcafind $RDK_FSROOT_PATH/usr/bin/
-       cp $DCA_PATH/dcaloadave $RDK_FSROOT_PATH/usr/bin/
-       cp $DCA_PATH/dcaprocess $RDK_FSROOT_PATH/usr/bin/
-       cp $DCA_PATH/ipvideo $RDK_FSROOT_PATH/usr/bin/
+       cd .
+       sh $DCA_PATH/build.sh build
+       cp $DCA_PATH/dca $RDK_FSROOT_PATH/usr/bin/
        cp $DCA_PATH/dcacpu $RDK_FSROOT_PATH/usr/bin/
        cp $DCA_PATH/dcamem $RDK_FSROOT_PATH/usr/bin/
 }
@@ -129,11 +125,7 @@ function install()
     echo "Compiled"
     cd $DCA_PATH
     sh $DCA_PATH/build.sh install
-    cp $DCA_PATH/dcaseek $RDK_FSROOT_PATH/usr/bin/
-    cp $DCA_PATH/dcafind $RDK_FSROOT_PATH/usr/bin/
-    cp $DCA_PATH/dcaloadave $RDK_FSROOT_PATH/usr/bin/
-    cp $DCA_PATH/dcaprocess $RDK_FSROOT_PATH/usr/bin/
-    cp $DCA_PATH/ipvideo $RDK_FSROOT_PATH/usr/bin/
+    cp $DCA_PATH/dca $RDK_FSROOT_PATH/usr/bin/
     cp $DCA_PATH/dcacpu $RDK_FSROOT_PATH/usr/bin/
     cp $DCA_PATH/dcamem $RDK_FSROOT_PATH/usr/bin/
     echo "Copied"

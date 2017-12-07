@@ -43,9 +43,21 @@ export RDK_TOOLCHAIN_PATH=${RDK_TOOLCHAIN_PATH-`readlink -m $RDK_PROJECT_ROOT_PA
 export RDK_COMPONENT_NAME=${RDK_COMPONENT_NAME-`basename $RDK_SOURCE_PATH`}
 export DCA_PATH=$RDK_SOURCE_PATH
 
+# glib
+export WORK_DIR=$RDK_PROJECT_ROOT_PATH/work${RDK_PLATFORM_DEVICE^^}
+export GLIB_HEADER_PATH=${WORK_DIR}/rootfs/usr/local/include/glib-2.0/
+export GLIB_CONFIG_PATH=${WORK_DIR}/rootfs/usr/local/lib
+
+export COMMON_HEADER_PATH=${WORK_DIR}/rootfs/usr/local/include
+
 if [ "$RDK_PLATFORM_SOC" == "intel" ]; then
-export CFLAGS="-DINTEL"
-export CPPFLAGS=${CFLAGS}
+    export CFLAGS="-DINTEL"
+    export CPPFLAGS=${CFLAGS}
+    export GLIBS='-lglib-2.0 -lz'
+elif [ "$RDK_PLATFORM_SOC" = "broadcom" ]; then
+    export GLIBS='-lglib-2.0 -lintl -lz'
+elif [ "$RDK_PLATFORM_SOC" = "ambarella" ]; then
+    export GLIBS='-lglib-2.0'
 fi
 
 for option in $@
@@ -63,3 +75,4 @@ do
     make all
   fi
 done
+
