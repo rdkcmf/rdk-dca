@@ -51,6 +51,7 @@ char *LOG_PATH = NULL;
 char *DEVICE_TYPE = NULL;
 cJSON *SEARCH_RESULT_JSON = NULL, *ROOT_JSON = NULL;
 int CUR_EXEC_COUNT = 0;
+long LAST_SEEK_VALUE = 0;
 
 /** @description: Process the top_log.txt patterns (Load average and process usage)
  *  @param logfile name, node head, node count
@@ -238,6 +239,7 @@ int processPattern(char **prev_file, char *logfile, GList **rdkec_head, GList *p
         *prev_file = malloc(strlen(logfile) + 1);
       } else {
         char *tmp = NULL;
+        writeLogSeek(*prev_file, LAST_SEEK_VALUE);
         tmp = realloc(*prev_file, strlen(logfile) + 1);
         if (NULL != tmp) {
           *prev_file = tmp;
@@ -397,6 +399,7 @@ int parseFile(char *fname)
     usleep(USLEEP_SEC);
   }
   processPattern(&prevfile, filename, &rdkec_head, pchead, pcIndex);
+  writeLogSeek(filename, LAST_SEEK_VALUE);
   pchead = NULL;
 
   /* max limit not maintained for rdkec_head FIXME */

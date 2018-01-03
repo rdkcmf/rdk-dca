@@ -239,6 +239,7 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
     if (NULL == rval)
     {
       long seek_value = ftell(LOG_FP);
+      LAST_SEEK_VALUE = seek_value;
 
       fclose(LOG_FP);
       LOG_FP = NULL;
@@ -261,10 +262,6 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
             return NULL;
         }
         rval = fgets(buf, buflen, LOG_FP);
-      }
-      else
-      {
-        writeLogSeek(name, seek_value);
       }
     }
   }

@@ -71,6 +71,7 @@ extern cJSON *SEARCH_RESULT_JSON;
 extern cJSON *ROOT_JSON;
 
 extern int CUR_EXEC_COUNT;
+extern long LAST_SEEK_VALUE;
 
 //#define LOG(fmt,__etc...) fprintf(stderr, "%s(%s:%d) "fmt"\n", __FUNCTION__, __FILE__, (int)__LINE__, ##__etc);fflush(stdout);
 #define LOG(fmt,__etc...) fprintf(stderr, fmt"\n", ##__etc);fflush(stdout);
