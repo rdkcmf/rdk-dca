@@ -27,6 +27,7 @@ INCLUDE = -Isrc \
 	  -I$(RDK_PROJECT_ROOT_PATH)/opensource/src/cjson \
 	  -I$(RDK_PROJECT_ROOT_PATH)/opensource/usr/local/include/cjson \
 	  -I$(RDK_PROJECT_ROOT_PATH)/opensource/cjson \
+	  -I$(RDK_PROJECT_ROOT_PATH)/opensource/lib/cjson/include \
 	  -I$(RDK_PROJECT_ROOT_PATH)/opensource/lib/glib-2.0/include \
 	  -I$(COMMON_HEADER_PATH)
 
