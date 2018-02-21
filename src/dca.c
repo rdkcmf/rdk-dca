@@ -95,7 +95,7 @@ int addToJson(GList *pchead)
               addToSearchResult(tmp->header, tmp_str);
             }
           } else if(tmp->d_type == STR) {
-            if (NULL != tmp->data) {
+            if (NULL != tmp->data && (strcmp(tmp->data, "0") != 0)) {
               addToSearchResult(tmp->header, tmp->data);
             }
           }
