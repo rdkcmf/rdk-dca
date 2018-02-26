@@ -65,10 +65,11 @@ typedef struct proc_info {
 } procinfo;
 
 typedef struct _procMemCpuInfo {
-  pid_t pid;
+  pid_t *pid;
   char processName[BUF_LEN];
   char cpuUse[BUF_LEN];
   char memUse[BUF_LEN];
+  int total_instance;
 } procMemCpuInfo;
 
 int getProcInfo(procMemCpuInfo *pInfo);
@@ -79,10 +80,12 @@ int getProcUsage(char *processName) {
   if (processName != NULL) {
     procMemCpuInfo pInfo;
     char pidofCommand[PIDOF_SIZE];
-    char pidTempArray[PID_SIZE] = {0};
     FILE *cmdPid;
     char *mem_key = NULL, *cpu_key = NULL;
     int ret = 0;
+    int index = 0;
+    pid_t *pid = NULL;
+    pid_t *temp = NULL;
 
     memset(&pInfo, '\0', sizeof(procMemCpuInfo));
     memcpy(pInfo.processName, processName, strlen(processName)+1); 
@@ -93,12 +96,43 @@ int getProcUsage(char *processName) {
       LOG("Failed to execute %s", pidofCommand);
       return 0;
     }
-    fgets(pidTempArray, PID_SIZE, cmdPid);
-    pInfo.pid = strtoul(pidTempArray, NULL, PID_SIZE);
-    pclose(cmdPid);
 
-    if (pInfo.pid <= 0)
-      return 0;
+    pid = (int *) malloc (sizeof(pid_t));
+    if ( NULL == pid )
+    {
+        pclose(cmdPid);
+        return 0;
+    }
+    *pid=0;
+    while(fscanf(cmdPid,"%d",(pid+index)) == 1)
+    {
+        if ((*(pid+index)) <= 0)
+        {
+            continue;
+        }
+        index++;
+        temp = (pid_t *) realloc (pid,((index+1)*sizeof(pid_t)) );
+        if ( NULL == temp )
+        {
+           if(pid)
+                free(pid);
+           pclose(cmdPid);
+           return 0;
+        }
+        pid=temp;
+        temp=NULL;
+    }
+    // If pidof command output is empty
+    if ((*pid) <= 0)
+    {
+        free(pid);
+        pclose(cmdPid);
+        return 0;
+    }
+
+    pInfo.total_instance=index;
+    pInfo.pid=pid;
+    pclose(cmdPid);
 
     if(0 != getProcInfo(&pInfo))
     {
@@ -123,8 +157,13 @@ int getProcUsage(char *processName) {
       if (cpu_key)
         free(cpu_key);
 
+      if (pid)
+        free(pid);
+
       return ret;
     }
+    if (pid)
+      free(pid);
   } 
   return 0;
 }
@@ -254,13 +293,18 @@ int getMemInfo(procMemCpuInfo *pmInfo)
   double residentMemory = 0.0;
   procinfo pinfo;
   long pageSizeInKb = sysconf(_SC_PAGE_SIZE) / 1024; /* x86-64 is configured to use 2MB pages */
+  unsigned int total_memory=0;
+  int index = 0;
 
-  memset(&pinfo, 0, sizeof(procinfo));
-  
-  if( 0 == getProcPidStat(pmInfo->pid, &pinfo))
-    return 0;
+  for(index=0;index<(pmInfo->total_instance);index++)
+  {
+    memset(&pinfo, 0, sizeof(procinfo));
+    if( 0 == getProcPidStat(pmInfo->pid[index], &pinfo))
+      return 0;
+    total_memory+=pinfo.rss;
+  }
 
-  residentMemory = pinfo.rss * pageSizeInKb;
+  residentMemory = total_memory * pageSizeInKb;
   intStr = (int)residentMemory;
   intValue = intStr;
   if (intValue >= 1024)
@@ -282,7 +326,6 @@ int getCPUInfo(procMemCpuInfo *pInfo)
   int ret = 0;
   FILE *inFp = NULL;
   char command[CMD_LEN] = {'\0'};
-  char *pcpu = NULL;
   char var1[BUF_LEN] = {'\0'};
   char var2[BUF_LEN] = {'\0'};
   char var3[BUF_LEN] = {'\0'};           
@@ -293,6 +336,8 @@ int getCPUInfo(procMemCpuInfo *pInfo)
   char var8[512]= {'\0'};
   char var9[512]= {'\0'}; 
   char var10[512]= {'\0'};          
+  int total_cpu_usage=0;
+  char top_op[2048]= {'\0'};
 
   if (pInfo == NULL) {
 
@@ -318,26 +363,23 @@ int getCPUInfo(procMemCpuInfo *pInfo)
 
   //  2268 root      20   0  831m  66m  20m S   27 13.1 491:06.82 Receiver
 #ifdef INTEL
-  if (fscanf(inFp,"%s %s %s %s %s %s %s %s", var1, var2, var3, var4, var5, var6, var7, var8) == 8) {                           
-    pcpu = var7;
+  while(fgets(top_op,2048,inFp)!=NULL) {
+    if(sscanf(top_op,"%s %s %s %s %s %s %s %s", var1, var2, var3, var4, var5, var6, var7, var8) == 8) {
+      total_cpu_usage += atoi(var7);
+      ret=1;
+    }
   }
   //#endif
 #else
-  //while(fscanf(inFp,"%s %s", var1, var2) == 2)
-  //    {
-  //	    pcpu = var1;
-  //	    pmem = var2;
-  //   }
-  if (fscanf(inFp,"%s %s %s %s %s %s %s %s %s %s", var1, var2, var3, var4, var5, var6, var7, var8, var9, var10) == 10) {                           
-    pcpu = var9;
+  while(fgets(top_op,2048,inFp)!=NULL) {
+    if(sscanf(top_op,"%s %s %s %s %s %s %s %s %s %s", var1, var2, var3, var4, var5, var6, var7, var8, var9, var10) == 10) {
+      total_cpu_usage += atoi(var9);
+      ret=1;
+    }
   }
 #endif
 
-  if (pcpu != NULL) {
-    strncpy(pInfo->cpuUse, pcpu, strlen(pcpu)+1);
-    ret = 1;
-  }
-
+  snprintf(pInfo->cpuUse, sizeof(pInfo->cpuUse), "%d", total_cpu_usage);
   pclose(inFp);
   return ret;
 
@@ -428,12 +470,19 @@ int getProcessCpuUtilization(int pid, int *procCpuUtil)
 
 int getCPUInfo(procMemCpuInfo *pmInfo) {
   int cpu = 0;
+  int total_cpu = 0;
+  int index = 0;
 
-  if (0 == getProcessCpuUtilization(pmInfo->pid, &cpu))
+  for(index=0;index<(pmInfo->total_instance);index++)
   {
-    return 0;
+    if (0 == getProcessCpuUtilization(pmInfo->pid[index], &cpu))
+    {
+      continue;
+    }
+    total_cpu+=cpu;
   }
-  sprintf(pmInfo->cpuUse, "%.1f", (float)cpu);
+
+  snprintf(pmInfo->cpuUse, sizeof(pmInfo->cpuUse), "%.1f", (float)total_cpu);
   return 1;
 }
 
