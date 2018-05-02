@@ -106,6 +106,7 @@ function build()
        cp $DCA_PATH/dca $RDK_FSROOT_PATH/usr/bin/
        cp $DCA_PATH/dcacpu $RDK_FSROOT_PATH/usr/bin/
        cp $DCA_PATH/dcamem $RDK_FSROOT_PATH/usr/bin/
+       cp $DCA_PATH/dcaprocess $RDK_FSROOT_PATH/usr/bin/
 }
 
 
@@ -128,6 +129,7 @@ function install()
     cp $DCA_PATH/dca $RDK_FSROOT_PATH/usr/bin/
     cp $DCA_PATH/dcacpu $RDK_FSROOT_PATH/usr/bin/
     cp $DCA_PATH/dcamem $RDK_FSROOT_PATH/usr/bin/
+    cp $DCA_PATH/dcaprocess $RDK_FSROOT_PATH/usr/bin/
     echo "Copied"
     
 }
