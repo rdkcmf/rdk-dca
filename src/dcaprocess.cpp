@@ -233,7 +233,7 @@ typedef struct proc_info {
   int           stime;
   int           cutime;
   int           cstime;
-  unsigned int  vsize;
+  unsigned int  rss;
 } procinfo;
 
 /** @description: To get process information of the process.
@@ -300,7 +300,7 @@ bool getProcInfo(int pid, procinfo * pinfo)
 		&(minflt), &(cminflt), &(majflt), &(cmajflt), &(pinfo->utime),
 		&(pinfo->stime), &(pinfo->cutime), &(pinfo->cstime), &(counter),
 		&(priority), &(timeout), &(itrealvalue), &(starttime),
-		&(pinfo->vsize), &(rss), &(rlim), &(startcode), &(endcode),
+		&(vsize), &(pinfo->rss), &(rlim), &(startcode), &(endcode),
 		&(startstack), &(kstkesp), &(kstkeip), &(signal), &(blocked),
 		&(sigignore), &(sigcatch), &(wchan));
 
@@ -401,6 +401,7 @@ int main(int argc,char *argv[]) {
     int pid = 0;
     int cpu = 0;
     FILE *inFp = NULL;
+    int pagesize_kb = 0;
 
     memset(&pInfo, 0, sizeof(procinfo));
     
@@ -435,7 +436,8 @@ int main(int argc,char *argv[]) {
 
     getProcessCpuUtilization(pid,&cpu);
 
-    cout << "{\"mem_" << processName << "\":\"" << pInfo.vsize << "\"},";
+    pagesize_kb = getpagesize()/1024;
+    cout << "{\"mem_" << processName << "\":\"" << (pInfo.rss) * pagesize_kb << "\"},";
     cout << "{\"cpu_" << processName << "\":\"" << cpu << "\"}";
 
     return true;
