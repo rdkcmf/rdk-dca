@@ -490,11 +490,30 @@ int parseFile(char *fname)
  *  @return parseFile() function return code
  */
 int main(int argc, char *argv[]) {
-  char *fname = argv[1];
+  char *fname = NULL;
+  char *logPath = NULL;
+  char *persistentPath = NULL;
   int rc = -1;
+
+  if (argc >= 2) {
+    fname = argv[1];
+  }
+  if (argc >= 3) {
+    logPath = argv[2];
+  }
+  if (argc >= 4) {
+    persistentPath = argv[3];
+  }
+
   if (NULL != fname) {
     LOG("Conf File =  %s ", fname);
-    updateConfVal();
+    if (NULL != logPath) {
+      LOG("Log Path = %s ", logPath);
+    }
+    if (NULL != persistentPath) {
+      LOG("Persistent Path = %s ", persistentPath);
+    }
+    updateConfVal(logPath, persistentPath);
     updateExecCounter();
     initSearchResultJson(&ROOT_JSON, &SEARCH_RESULT_JSON);
     rc = parseFile(fname);

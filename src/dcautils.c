@@ -296,7 +296,7 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
  *  @param none
  *  @return none
  */
-void updateIncludeConfVal(void)
+void updateIncludeConfVal(char *logpath, char *perspath)
 {
   FILE *file = fopen( INCLUDE_PROPERTIES, "r");
   if(NULL != file )
@@ -323,13 +323,37 @@ void updateIncludeConfVal(void)
     }
     fclose(file);
   }
+  if (NULL != logpath && strcmp(logpath, "") != 0)
+  {
+    char *tmp = NULL;
+    tmp = realloc(LOG_PATH, strlen(logpath) + 1 );
+    if (NULL != tmp) {
+      LOG_PATH = tmp;
+      strcpy(LOG_PATH, logpath);
+    } else {
+      free(LOG_PATH);
+      LOG_PATH = NULL;
+    }
+  }
+  if (NULL != perspath && strcmp(perspath, "") != 0)
+  {
+    char *tmp = NULL;
+    tmp = realloc(PERSISTENT_PATH, strlen(perspath) + 1 );
+    if (NULL != tmp) {
+      PERSISTENT_PATH = tmp;
+      strcpy(PERSISTENT_PATH, perspath);
+    } else {
+      free(PERSISTENT_PATH);
+      PERSISTENT_PATH = NULL;
+    }
+  }
 }
 
 /** @description: To update the configuration values from the device.properties
  *  @param none
  *  @return none
  */
-void updateConfVal(void)
+void updateConfVal(char *logpath, char *perspath)
 {
   FILE *file = NULL;
 
@@ -353,7 +377,7 @@ void updateConfVal(void)
     fclose(file);
   }
 
-  updateIncludeConfVal();
+  updateIncludeConfVal(logpath, perspath);
 
   if (NULL != DEVICE_TYPE && NULL != PERSISTENT_PATH && NULL != LOG_PATH) {
     if ( 0 == strcmp("broadband", DEVICE_TYPE) ) {
@@ -362,22 +386,26 @@ void updateConfVal(void)
       char *tmp = NULL;
 
 
-      tmp = realloc(PERSISTENT_PATH, strlen(PERSISTENT_PATH) + strlen(tmp_seek_file) + 1 );
-      if (NULL != tmp) {
-        PERSISTENT_PATH = tmp;
-        strcat(PERSISTENT_PATH, tmp_seek_file);
-      } else {
-        free(PERSISTENT_PATH);
-        PERSISTENT_PATH = NULL;
+      if (NULL == perspath || strcmp(perspath, "") == 0) {
+        tmp = realloc(PERSISTENT_PATH, strlen(PERSISTENT_PATH) + strlen(tmp_seek_file) + 1 );
+        if (NULL != tmp) {
+          PERSISTENT_PATH = tmp;
+          strcat(PERSISTENT_PATH, tmp_seek_file);
+        } else {
+          free(PERSISTENT_PATH);
+          PERSISTENT_PATH = NULL;
+        }
       }
 
-      tmp = realloc(LOG_PATH, strlen(LOG_PATH) + strlen(tmp_log_file) + 1 );
-      if (NULL != tmp) {
-        LOG_PATH = tmp;
-        strcat(LOG_PATH, tmp_log_file);
-      } else {
-        free(LOG_PATH);
-        LOG_PATH = NULL;
+      if (NULL == logpath || strcmp(logpath, "") == 0) {
+        tmp = realloc(LOG_PATH, strlen(LOG_PATH) + strlen(tmp_log_file) + 1 );
+        if (NULL != tmp) {
+          LOG_PATH = tmp;
+          strcat(LOG_PATH, tmp_log_file);
+        } else {
+          free(LOG_PATH);
+          LOG_PATH = NULL;
+        }
       }
     } else {
       /* FIXME */
@@ -386,22 +414,26 @@ void updateConfVal(void)
       char *tmp = NULL;
       //char *tmp_seek_file = "./tmp/rtl_";
       //char *tmp_log_file = "./logs/";
-      tmp = realloc(PERSISTENT_PATH, strlen(tmp_seek_file) + 1 );
-      if (NULL != tmp) {
-        PERSISTENT_PATH = tmp;
-        strcpy(PERSISTENT_PATH, tmp_seek_file);
-      } else {
-        free(PERSISTENT_PATH);
-        PERSISTENT_PATH = NULL;
+      if (NULL == perspath || strcmp(perspath, "") == 0) {
+        tmp = realloc(PERSISTENT_PATH, strlen(tmp_seek_file) + 1 );
+        if (NULL != tmp) {
+          PERSISTENT_PATH = tmp;
+          strcpy(PERSISTENT_PATH, tmp_seek_file);
+        } else {
+          free(PERSISTENT_PATH);
+          PERSISTENT_PATH = NULL;
+        }
       }
 
-      tmp = realloc(LOG_PATH, strlen(tmp_log_file) + 1 );
-      if (NULL != tmp) {
-        LOG_PATH = tmp;
-        strcpy(LOG_PATH, tmp_log_file);
-      } else {
-        free(LOG_PATH);
-        LOG_PATH = NULL;
+      if (NULL == logpath || strcmp(logpath, "") == 0) {
+        tmp = realloc(LOG_PATH, strlen(tmp_log_file) + 1 );
+        if (NULL != tmp) {
+          LOG_PATH = tmp;
+          strcpy(LOG_PATH, tmp_log_file);
+        } else {
+          free(LOG_PATH);
+          LOG_PATH = NULL;
+        }
       }
     }
   }
