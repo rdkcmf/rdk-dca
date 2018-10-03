@@ -157,6 +157,7 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
   char *rval = NULL;
 
   if ((NULL == PERSISTENT_PATH) || (NULL == LOG_PATH) || (NULL == name)) {
+    LOG("Path variables are empty");
     return NULL;
   }
 
@@ -188,7 +189,10 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
         curLog = NULL;
 
         if (NULL == LOG_FP)
+        {
+          LAST_SEEK_VALUE = 0;
           return NULL;
+        }
 
         fileSize = fsize(LOG_FP);
 
@@ -198,11 +202,10 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
         }
         else
         {
-          if (NULL != DEVICE_TYPE)
+          if ((NULL != DEVICE_TYPE) && (0 == strcmp("broadband", DEVICE_TYPE)))
           {
-            if (0 == strcmp("broadband", DEVICE_TYPE)) {
-              fseek(LOG_FP, 0, 0);
-            }
+            LOG("Telemetry file pointer corrupted");
+            fseek(LOG_FP, 0, 0);
           }
           else
           {
@@ -218,11 +221,17 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
 
               LOG_FP = fopen(rotatedLog, "rb");
 
+              if (NULL == LOG_FP)
+              {
+                LOG("Error in opening file %s", rotatedLog);
+                LAST_SEEK_VALUE = 0;
+                free(rotatedLog);
+                rotatedLog = NULL;
+                return NULL;
+              }
+
               free(rotatedLog);
               rotatedLog = NULL;
-
-              if (NULL == LOG_FP)
-                return NULL;
 
               fseek(LOG_FP, seek_value, 0);
               is_rotated_log = 1;
@@ -255,13 +264,27 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
           strcat(curLog, name);
           LOG_FP = fopen(curLog, "rb");
 
+          if (NULL == LOG_FP)
+          {
+            LOG("Error in opening file %s", curLog);
+            LAST_SEEK_VALUE = 0;
+            free(curLog);
+            curLog = NULL;
+            return NULL;
+          }
+
           free(curLog);
           curLog = NULL;
-
-          if (NULL == LOG_FP)
-            return NULL;
         }
         rval = fgets(buf, buflen, LOG_FP);
+	if (NULL == rval)
+	{
+          seek_value = ftell(LOG_FP);
+          LAST_SEEK_VALUE = seek_value;
+
+          fclose(LOG_FP);
+          LOG_FP = NULL;
+	}
       }
     }
   }
