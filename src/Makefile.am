@@ -21,5 +21,10 @@ bin_PROGRAMS = dca dcamem dcacpu
 dca_SOURCES = dca.c dcalist.c dcautils.c dcaproc.c dcajson.c
 dca_CFLAGS = $(GLIB_CFLAGS)
 dca_LDFLAGS = $(GLIB_LIBS) $(LIBCJSON_LIBS)
+if ENABLE_TR181_MESSAGEBUS
+dca_SOURCES += dcatr181.c
+dca_CFLAGS += $(DBUS_CFLAGS) -DUSE_TR181_CCSP_MESSAGEBUS
+dca_LDFLAGS += $(DBUS_LIBS)
+endif
 dcamem_SOURCES = dcamem.c
 dcacpu_SOURCES = dcacpu.c

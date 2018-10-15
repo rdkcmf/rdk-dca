@@ -45,6 +45,8 @@ AC_HEADER_STDC
 dnl Checks for header files.
 AC_CHECK_HEADERS([limits.h memory.h stdlib.h string.h sys/socket.h unistd.h])
 
+ENABLE_TR181_MESSAGEBUS=false
+
 dnl Checks for typedefs, structures, and compiler characteristics.
 dnl AC_CHECK_HEADER_STDBOOL
 AC_TYPE_UINT8_T
@@ -53,6 +55,20 @@ AC_FUNC_MALLOC
 
 PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.24.0])
 PKG_CHECK_MODULES([LIBCJSON], [libcjson >= 1.0])
+#PKG_CHECK_MODULES([DBUS], [dbus-1  >= 0.28])
+
+AC_ARG_ENABLE([tr181messagebus],
+              AS_HELP_STRING([--enable-tr181messagebus],[enable tr181 ccsp message bus (default is no)]),
+              [
+                case "${enableval}" in
+                 yes) ENABLE_TR181_MESSAGEBUS=true;;
+                  no) AC_MSG_ERROR([tr181 ccsp message bus support is disabled]) ;;
+                   *) AC_MSG_ERROR([bad value ${enableval} for --enable-tr181messagebus]) ;;
+                esac
+              ],
+              [echo "tr181 ccsp message bus support is disabled"])
+
+AM_CONDITIONAL([ENABLE_TR181_MESSAGEBUS], [test x$ENABLE_TR181_MESSAGEBUS = xtrue])
 
 
 AC_CONFIG_FILES([Makefile

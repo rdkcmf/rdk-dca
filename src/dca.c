@@ -46,6 +46,11 @@
 #include "dcautils.h"
 #include "dcalist.h"
 
+#ifdef USE_TR181_CCSP_MESSAGEBUS
+#include "dcatr181.h"
+#define TR181BUF_LENGTH 512
+#endif
+
 char *PERSISTENT_PATH = NULL;
 char *LOG_PATH = NULL;
 char *DEVICE_TYPE = NULL;
@@ -78,6 +83,51 @@ int processTopPattern(char *logfile, GList *pchead, int pcIndex)
   }
   return 0;
 }
+
+#ifdef USE_TR181_CCSP_MESSAGEBUS
+int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
+{
+  int ret_val = 0;
+  GList *tlist = pchead;
+  pcdata_t *tmp = NULL;
+  char tr181data_buff[TR181BUF_LENGTH] = {'\0'};
+  int length = 0;
+  
+  /* Initialize Message bus handler */
+  ret_val = ccsp_handler_init();
+  if ( 0 != ret_val ) {
+    LOG("ccsp_handler_init is failed\n");
+    return ret_val;
+  }
+  
+  /* Get TR181 Telemetry MessageBusSource RFC value */
+  ret_val = get_tr181param_value("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Telemetry.MessageBusSource.Enable", tr181data_buff, TR181BUF_LENGTH);
+  if( 0 == ret_val && 0 == strcmp(tr181data_buff, "true") ) {
+    while (NULL != tlist) {
+      tmp = tlist->data;
+      if (NULL != tmp) {
+        if( NULL != tmp->header && NULL != tmp->pattern && NULL == tmp->data ) {
+          ret_val = get_tr181param_value(tmp->pattern, tr181data_buff, TR181BUF_LENGTH);
+          if ( 0 == ret_val ) {
+            length = strlen(tr181data_buff) + 1;
+            tmp->data = (char*)malloc(length);
+            if ( NULL != tmp->data ) {
+              snprintf(tmp->data, length, "%s", tr181data_buff);
+            }
+          } else {
+            LOG("Telemetry data source not found. Type = <message_bus>. Content string = %s\n",tmp->pattern);
+          }
+        }
+      }
+        tlist = g_list_next(tlist);
+    }
+  } else {
+    LOG("The TR181 MessageBusSource is disabled via RFC\n");
+  }
+  ccsp_handler_exit();
+  return 0;
+}
+#endif
 
 int addToJson(GList *pchead)
 {
@@ -258,7 +308,14 @@ int processPattern(char **prev_file, char *logfile, GList **rdkec_head, GList *p
     if (NULL != pchead) {
       if (0 == strcmp(logfile, "top_log.txt")) {
         processTopPattern(logfile, pchead, pcIndex);
-      } else {
+      }
+#ifdef USE_TR181_CCSP_MESSAGEBUS
+      else if(0 == strcmp(logfile, "<message_bus>")) {
+         processTr181Objects(logfile, pchead, pcIndex);
+         addToJson(pchead);
+      }
+#endif
+      else {
         processCountPattern(logfile, pchead, pcIndex, rdkec_head);
         addToJson(pchead);
       }
@@ -312,7 +369,13 @@ int getDType(char *filename, char *header, DType_t *dtype)
       *dtype = STR;
     } else if (0 == strcmp(filename, "top_log.txt")) {
       *dtype = STR;
-    } else {
+    }
+#ifdef USE_TR181_CCSP_MESSAGEBUS
+    else if(0 == strcmp(filename, "<message_bus>")) {
+      *dtype = STR;
+    }
+#endif 
+    else {
       *dtype = INT;
     }
   }
