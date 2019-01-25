@@ -49,6 +49,8 @@
 #ifdef USE_TR181_CCSP_MESSAGEBUS
 #include "dcatr181.h"
 #define TR181BUF_LENGTH 512
+#define OBJ_DELIMITER "{i}"
+#define DELIMITER_SIZE 3
 #endif
 
 char *PERSISTENT_PATH = NULL;
@@ -85,42 +87,116 @@ int processTopPattern(char *logfile, GList *pchead, int pcIndex)
 }
 
 #ifdef USE_TR181_CCSP_MESSAGEBUS
-int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
+
+/** @description: Append object value to data filed
+ *  @param object node, data value
+ *  @return
+ */
+static void appendData( pcdata_t* dst, const char* src)
 {
-  int ret_val = 0;
-  GList *tlist = pchead;
+  int dst_len, src_len = 0;
+
+  if(NULL == dst || NULL == src)
+    return;
+
+  //Copy data
+  if(NULL == dst->data) {
+    src_len = strlen(src) + 1;
+    dst->data = (char*)malloc(src_len);
+    if (NULL != dst->data) {
+      snprintf(dst->data, src_len, "%s", src);
+    } else {
+      LOG("Failed to allocate memory for telemetry node data\n");
+    }
+  } else { //Append data
+    dst_len = strlen(dst->data) + 1;
+    src_len = strlen(src) + 1;
+    dst->data = (char*)realloc(dst->data, dst_len+src_len);
+    if(NULL != dst->data) {
+      strncat(dst->data, ",", 1);
+      snprintf((dst->data)+dst_len, src_len, "%s", src);
+    } else {
+      LOG("Failed to re-allocate memory for telemetry node data\n");
+    }
+  }
+}
+
+/** @description: Process tr181 objects through ccsp message bus
+ *  @param log file, node head, node count
+ *  @return 1 on failure, 0 on success
+ */
+static int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
+{
+  int ret_val, length, obj_count, i = 0;
+  GList *tlist = NULL;
   pcdata_t *tmp = NULL;
   char tr181data_buff[TR181BUF_LENGTH] = {'\0'};
-  int length = 0;
-  
-  /* Initialize Message bus handler */
+  //strlen("NumberOfEntries") = 15
+  char tr181obj_buff[TR181BUF_LENGTH + 15] = {'\0'};
+  char *tck, *first_tck = NULL;
+
+  //Initialize message bus handler
   ret_val = ccsp_handler_init();
   if ( 0 != ret_val ) {
     LOG("ccsp_handler_init is failed\n");
     return ret_val;
   }
-  
-  /* Get TR181 Telemetry MessageBusSource RFC value */
+
+  //Get the value of TR181 telemetry MessageBusSource RFC
   ret_val = get_tr181param_value("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Telemetry.MessageBusSource.Enable", tr181data_buff, TR181BUF_LENGTH);
-  if( 0 == ret_val && 0 == strcmp(tr181data_buff, "true") ) {
-    while (NULL != tlist) {
+  if(0 == ret_val && 0 == strcmp(tr181data_buff, "true") ) {
+    //Loop through the given list and fill the data field of each node
+    for(tlist=pchead; tlist!=NULL; tlist=g_list_next(tlist)) {
       tmp = tlist->data;
       if (NULL != tmp) {
-        if( NULL != tmp->header && NULL != tmp->pattern && NULL == tmp->data ) {
-          ret_val = get_tr181param_value(tmp->pattern, tr181data_buff, TR181BUF_LENGTH);
-          if ( 0 == ret_val ) {
-            length = strlen(tr181data_buff) + 1;
-            tmp->data = (char*)malloc(length);
-            if ( NULL != tmp->data ) {
-              snprintf(tmp->data, length, "%s", tr181data_buff);
+        if(NULL != tmp->header && NULL != tmp->pattern && strlen(tmp->pattern) < TR181BUF_LENGTH && NULL == tmp->data) {
+          //Check whether given object has multi-instance token, if no token found it will be treated as a single instance object
+          //Or if more than one token found, skip the object as it is not valid/supported
+          //Check for first multi-instance token
+          tck = strstr(tmp->pattern, OBJ_DELIMITER);
+          if(NULL == tck) { //Single instance check
+            ret_val = get_tr181param_value(tmp->pattern, tr181data_buff, TR181BUF_LENGTH);
+            if (0 == ret_val) {
+              appendData(tmp, tr181data_buff);
+            } else {
+              LOG("Telemetry data source not found. Type = <message_bus>. Content string = %s\n", tmp->pattern);
             }
-          } else {
-            LOG("Telemetry data source not found. Type = <message_bus>. Content string = %s\n",tmp->pattern);
-          }
+          } else { //Multi-instance check
+            first_tck = tck;
+            //Check for a next multi-instance token
+            tck = strstr(tck+DELIMITER_SIZE, OBJ_DELIMITER);
+            if(NULL == tck) {
+              //Get NumberOfEntries of a multi-instance object
+              length = first_tck - tmp->pattern;
+              snprintf(tr181obj_buff, length,  tmp->pattern);
+              strcat(tr181obj_buff, "NumberOfEntries");
+              ret_val = get_tr181param_value(tr181obj_buff, tr181data_buff, TR181BUF_LENGTH);
+              if(0 == ret_val) {
+                obj_count = atoi(tr181data_buff);
+                //Collect all all instance value of a object
+                if(obj_count > 0) {
+                  for(i=1; i<=obj_count; i++) {
+                    //Replace multi-instance token with an object instance number
+                    snprintf(tr181obj_buff, (length+1), tmp->pattern);
+                    sprintf(tr181obj_buff+length, "%d%s", i, (tmp->pattern + length + DELIMITER_SIZE));
+                    ret_val = get_tr181param_value(tr181obj_buff, tr181data_buff, TR181BUF_LENGTH);
+                    if(0 == ret_val) {
+                      appendData(tmp, tr181data_buff);
+                    } else {
+                      LOG("Telemetry data source not found. Type = <message_bus>. Content string = %s\n", tr181obj_buff);
+                    }
+                  }//End of for loop
+                }
+              } else {
+                LOG("Failed to get NumberOfEntries. Type = <message_bus>. Content string = %s\n", tr181obj_buff);
+              }
+            } else {
+              LOG("Skipping Telemetry object due to invalid format. Type = <message_bus>. Content string = %s\n", tmp->pattern);
+            }
+          }//End of Mult-instance check
         }
       }
-        tlist = g_list_next(tlist);
-    }
+    } //End of node loop through for loop
   } else {
     LOG("The TR181 MessageBusSource is disabled via RFC\n");
   }
