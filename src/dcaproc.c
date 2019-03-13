@@ -338,20 +338,34 @@ int getCPUInfo(procMemCpuInfo *pInfo)
   char var10[512]= {'\0'};          
   int total_cpu_usage=0;
   char top_op[2048]= {'\0'};
+  int cmd_option = 0;
 
   if (pInfo == NULL) {
 
     return 0;    
   }
 
+  /* Check Whether -c option is supported */
+  ret = system(" top -c -n 1 2> /dev/null");
+  if ( 0 == ret ) {
+    cmd_option = 1;
+  }
 #ifdef INTEL
   /* Format Use:  `top n 1 | grep Receiver` */
-
-  sprintf(command, "top -n 1 | grep -i '%s'", pInfo->processName);
+  if ( 1 == cmd_option ) {
+    sprintf(command, "top -n 1 -c | grep -v grep |grep -i '%s'", pInfo->processName);
+  } else {
+    sprintf(command, "top -n 1 | grep -i '%s'", pInfo->processName);
+  }
 #else 
   /* ps -C Receiver -o %cpu -o %mem */
   //sprintf(command, "ps -C '%s' -o %%cpu -o %%mem | sed 1d", pInfo->processName);
-  sprintf(command, "top -b -n 1 | grep -i '%s'", pInfo->processName);
+  if ( 1 == cmd_option ) {
+    sprintf(command, "top -b -n 1 -c | grep -v grep | grep -i '%s'", pInfo->processName);
+  } else {
+    sprintf(command, "top -b -n 1 | grep -i '%s'", pInfo->processName);
+  }
+
 
 #endif
 
