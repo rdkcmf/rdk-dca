@@ -241,18 +241,28 @@ int getIPVideo(char *line, pcdata_t *pcnode)
   strFound = strstr(line, pcnode->pattern);
 
   if (strFound != NULL ) {
-    int tlen = 0, plen = 0;
-    if (NULL == pcnode->data) {
-      pcnode->data = (char *) malloc(MAXLINE);
-    }
-    if (NULL == pcnode->data) {
-      return (-1);
-    }
+    int tlen = 0, plen = 0, vlen = 0;
     tlen = (int)strlen(line);
     plen = (int)strlen(pcnode->pattern);
+    strFound = strFound + plen ;
+    if (tlen > plen) {
+        vlen = strlen(strFound) ;
+        // If value is only single char make sure its not an empty space .
+        // Ideally component should not print logs with empty values but we have to consider logs from OSS components
+        if (( 1 == vlen ) && isspace(strFound[plen]))
+            return 0 ; 
 
-    strncpy (pcnode->data, (strFound+strlen(pcnode->pattern)), tlen-plen);
-    pcnode->data[tlen-plen] = '\0'; //For Boundary Safety
+        if ( vlen > 0 ) {
+          if (NULL == pcnode->data)
+              pcnode->data = (char *) malloc(MAXLINE);
+
+          if (NULL == pcnode->data)
+              return (-1);
+
+          strncpy (pcnode->data, strFound, MAXLINE);
+          pcnode->data[tlen-plen] = '\0'; //For Boundary Safety
+        }
+    }
   }
   return 0;
 }
