@@ -346,7 +346,7 @@ int getCPUInfo(procMemCpuInfo *pInfo)
   }
 
   /* Check Whether -c option is supported */
-  ret = system(" top -c -n 1 2> /dev/null");
+  ret = system(" top -c -n 1 2> /dev/null 1> /dev/null");
   if ( 0 == ret ) {
     cmd_option = 1;
   }
