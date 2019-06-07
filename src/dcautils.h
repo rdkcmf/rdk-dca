@@ -55,6 +55,8 @@
 #define INCLUDE_PROPERTIES "/etc/include.properties"
 #define DEVICE_PROPERTIES "/etc/device.properties"
 #define DELIMITER "<#=#>"
+// TR181 multi-instance support
+#define TR181_ARRAY_ELEMENT_DELIMITER DELIMITER
 
 #define DEFAULT_SEEK_PREFIX "/opt/.telemetry/tmp/rtl_"
 #define DEFAULT_LOG_PATH "/opt/logs/"
@@ -95,6 +97,8 @@ void clearSearchResultJson(cJSON **root);
 int printJson(cJSON *root);
 
 int getProcUsage(char *processName);
+
+char *strSplit(char *str, char *delim);
 
 /** @} */
 

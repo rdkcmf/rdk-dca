@@ -77,6 +77,11 @@ int insertPCNode(GList **pch, char *pattern, char *header, DType_t dtype, int co
       new->header = NULL;
     }
 
+    // TR181 multi-instance delimiter support
+    // set a default pattern type (controls use of json array)
+    // Actual pattern parsing call may decide to change this value
+    new->pattern_type = OTHER;
+
     new->d_type = dtype;
     if (dtype == INT) {
       new->count = count;
