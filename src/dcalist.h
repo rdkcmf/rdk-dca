@@ -45,10 +45,17 @@ typedef enum {
   STR
 } DType_t;
 
+// TR181 Multi-instance delimiter
+typedef enum {
+  TR181_MULTI_INSTANCE,
+  OTHER
+} PatternType_t;
+
 typedef struct pclist {
   char *header;
   char *pattern;
   DType_t d_type;
+  PatternType_t pattern_type;
   union {
     int count;
     char *data;
