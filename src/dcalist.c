@@ -37,9 +37,22 @@
 #include "dcautils.h"
 #include "dcalist.h"
 
-/** @description: To insert new pattern node as first in the list
- *  @param node head, Pattern, Header, Data type, pattern count and Data
- *  @return
+/*
+ * @addtogroup DCA_APIS
+ * @{
+ */
+
+/**
+ * @brief To insert a new pattern node at the beginning of the list.
+ *
+ * @param[in] pch         Node head.
+ * @param[in] pattern     Search pattern.
+ * @param[in] header      Header.
+ * @param[in] dtype       Data type.
+ * @param[in] count       Pattern count.
+ * @param[in] data        Data.
+ *
+ * @return  Returns the value of rc.
  */
 int insertPCNode(GList **pch, char *pattern, char *header, DType_t dtype, int count, char *data)
 {
@@ -84,9 +97,14 @@ int insertPCNode(GList **pch, char *pattern, char *header, DType_t dtype, int co
   return rc;
 }
 
-/** @description: To do custom comparison
- *  @param node pattern, search pattern
- *  @return node on success, NULL on failure
+/**
+ * @brief To do custom comparison.
+ *
+ * @param[in] np   Node pattern.
+ * @param[in] sp   Search pattern.
+ *
+ * @return  Returns status of the operation.
+ * @retval  Returns 0 on success and NULL on failure.
  */
 gint comparePattern(gconstpointer np, gconstpointer sp)
 {
@@ -100,10 +118,13 @@ gint comparePattern(gconstpointer np, gconstpointer sp)
   }
 }
 
-
-/** @description: To search node from the list based on the given pattern
- *  @param node head, pattern to search
- *  @return node on success, NULL on failure
+/**
+ * @brief To search node from the list based on the given pattern.
+ *
+ * @param[in]  pch       Node head.
+ * @param[in]  pattern   Pattern to search.
+ *
+ * @return  Returns node on success and NULL on failure.
  */
 pcdata_t* searchPCNode(GList *pch, char *pattern)
 {
@@ -115,9 +136,11 @@ pcdata_t* searchPCNode(GList *pch, char *pattern)
     return NULL;
 }
 
-/** @description: Debug function to print the node
- *  @param node
- *  @return
+/**
+ * @brief Debug function to print the node.
+ *
+ * @param[in] data       node data 
+ * @param[in] user_data  user data
  */
 void print_pc_node(gpointer data, gpointer user_data)
 {
@@ -132,18 +155,20 @@ void print_pc_node(gpointer data, gpointer user_data)
   }
 }
 
-/** @description: Debug function to print all the nodes in the list
- *  @param node head
- *  @return
+/**
+ * @brief Debug function to print all nodes in the list.
+ *
+ * @param[in] pch  node head
  */
 void printPCNodes(GList *pch)
 {
   g_list_foreach(pch, (GFunc)print_pc_node, NULL);
 }
 
-/** @description: Delete a node
- *  @param node head
- *  @return
+/**
+ * @brief To delete a node.
+ *
+ * @param[in] node    Node head.
  */
  void freePCNode(gpointer node)
 {
@@ -168,11 +193,21 @@ void printPCNodes(GList *pch)
   }
 }
 
-/** @description: Delete/Clear all the nodes in the list
- *  @param node head
- *  @return
+/**
+ * @brief To delete/clear all the nodes in the list.
+ *
+ * @param[in]  pch   Node head.
  */
 void clearPCNodes(GList **pch)
 {
   g_list_free_full(*pch, &freePCNode);
 }
+
+/** @} */  //END OF GROUP DCA_APIS
+
+/** @} */
+
+
+/** @} */
+/** @} */
+          

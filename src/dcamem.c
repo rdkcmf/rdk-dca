@@ -41,6 +41,11 @@
 
 int getMemoryUsage(char *memoryUtilization);
 
+/**
+ * @addtogroup DCA_APIS
+ * @{
+ */
+
 int main()
 {
 
@@ -58,11 +63,14 @@ int main()
 }
 
 
-/** @description: To get memory usage of the device.
- *  @param memoryUtil memoryusage of device.
- *  @return 1 on success.
+/**
+ * @brief To get memory usage of the device.
+ *
+ * @param[out] memoryUtilization    Memory usage of the device.
+ *
+ * @return  Returns status of operation.
+ * @retval  Return 1 on success.
  */
-
 int getMemoryUsage(char *memoryUtilization)
 {
 	FILE *memoryinfo;
@@ -115,6 +123,8 @@ int getMemoryUsage(char *memoryUtilization)
 	}
 	return 1;
 }
+
+/** @} */  //END OF GROUP DCA_APIS
 
 /** @} */
 

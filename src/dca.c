@@ -17,14 +17,23 @@
  * limitations under the License.
  */
 
+/**
+ * @defgroup DCA Data Collection and Analysis
+ * - Data Collection and Analysis (DCA) is responsible for collecting the data from various log files and send to server.
+ *
+ * @defgroup DCA_TYPES DCA Data types
+ * @ingroup  DCA
+ *
+ * @defgroup DCA_APIS  DCA API
+ * @ingroup  DCA
+ *
+ **/
 
 
 /**
  * @defgroup dca
  * @{
  **/
-
-
 
 
 /**
@@ -33,6 +42,7 @@
  * @defgroup src
  * @{
  **/
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,6 +63,11 @@
 #define DELIMITER_SIZE 3
 #endif
 
+/**
+ * @addtogroup DCA_TYPES
+ * @{
+ */
+
 char *PERSISTENT_PATH = NULL;
 char *LOG_PATH = NULL;
 char *DEVICE_TYPE = NULL;
@@ -60,9 +75,22 @@ cJSON *SEARCH_RESULT_JSON = NULL, *ROOT_JSON = NULL;
 int CUR_EXEC_COUNT = 0;
 long LAST_SEEK_VALUE = 0;
 
-/** @description: Process the top_log.txt patterns (Load average and process usage)
- *  @param logfile name, node head, node count
- *  @return
+/* @} */ // End of group DCA_TYPES
+
+/**
+ * @addtogroup DCA_APIS
+ * @{
+ */
+
+
+/** @brief This API processes the top command log file patterns to retrieve load average and process usage.
+ *
+ *  @param[in] logfile  top_log file
+ *  @param[in] pchead   Node  head
+ *  @param[in] pcIndex  Node  count
+ *
+ *  @return  Returns the status of the operation.
+ *  @retval  Returns zero on success, appropriate errorcode otherwise.
  */
 int processTopPattern(char *logfile, GList *pchead, int pcIndex)
 {
@@ -88,9 +116,10 @@ int processTopPattern(char *logfile, GList *pchead, int pcIndex)
 
 #ifdef USE_TR181_CCSP_MESSAGEBUS
 
-/** @description: Append object value to data filed
- *  @param object node, data value
- *  @return
+/** @brief This API appends tr181 object value to telemetry node.
+ *
+ *  @param[in] dst  Object node
+ *  @param[in] src  Data value
  */
 static void appendData( pcdata_t* dst, const char* src)
 {
@@ -121,9 +150,15 @@ static void appendData( pcdata_t* dst, const char* src)
   }
 }
 
-/** @description: Process tr181 objects through ccsp message bus
- *  @param log file, node head, node count
- *  @return 1 on failure, 0 on success
+/**
+ *  @brief This API process tr181 objects through ccsp message bus
+ *
+ *  @param[in] logfile  DCA pattern file
+ *  @param[in] pchead   Node head
+ *  @param[in] pcIndex  Node count
+ *
+ *  @return Returns status of the operation.
+ *  @retval Returns 1 on failure, 0 on success
  */
 static int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
 {
@@ -205,6 +240,13 @@ static int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
 }
 #endif
 
+/**
+ * @brief This function adds the value to the telemetry output json object.
+ *
+ * @param[in] pchead  Header field in the telemetry profile
+ *
+ * @return Returns status of operation.
+ */
 int addToJson(GList *pchead)
 {
   GList *tlist = pchead;
@@ -231,9 +273,14 @@ int addToJson(GList *pchead)
   }
 }
 
-/** @description: Process pattern if it has split text in the header
- *  @param log file matched line, node
- *  @return -1 on failure, 0 on success
+/**
+ * @brief Function to process pattern if it has split text in the header
+ *
+ * @param[in] line    Log file matched line
+ * @param[in] pcnode  Pattern to be verified. 
+ *
+ * @return Returns status of operation.
+ * @retval Return 0 on success, -1 on failure
  */
 int getIPVideo(char *line, pcdata_t *pcnode)
 {
@@ -267,9 +314,14 @@ int getIPVideo(char *line, pcdata_t *pcnode)
   return 0;
 }
 
-/** @description: To get RDK error code from the string
- *  @param source string, error code out
- *  @return
+/**
+ * @brief To get RDK error code.
+ *
+ * @param[in]  str    Source string.
+ * @param[out] ec     Error code.
+ *
+ * @return Returns status of operation.
+ * @retval Return 0 upon success.
  */
 int getErrorCode(char *str, char *ec)
 {
@@ -302,10 +354,14 @@ int getErrorCode(char *str, char *ec)
   return 0;
 }
 
-
-/** @description: To handle RDK Error codes from the log file
- *  @param log file
- *  @return -1 on failure, 0 on success
+/**
+ * @brief Function to handle error codes received from the log file.
+ *
+ * @param[in]  rdkec_head  Node head.
+ * @param[in]  line        Logfile matched line.
+ *
+ * @return Returns status of operation.
+ * @retval Return 0 upon success, -1 on failure.
  */
 int handleRDKErrCodes(GList **rdkec_head, char *line)
 {
@@ -329,9 +385,16 @@ int handleRDKErrCodes(GList **rdkec_head, char *line)
 }
 
 
-/** @description: Process pattern count (loggrep)
- *  @param log file, node head, node count
- *  @return -1 on failure, 0 on success
+/**
+ * @brief Function to process pattern count (loggrep)
+ *
+ * @param[in]  logfile     Current log file
+ * @param[in]  pchead      Node head
+ * @param[in]  pcIndex     Node count
+ * @param[in]  rdkec_head  RDK errorcode head
+ *
+ * @return Returns status of operation.
+ * @retval Return 0 upon success, -1 on failure.
  */
 int processCountPattern(char *logfile, GList *pchead, int pcIndex, GList **rdkec_head)
 {
@@ -362,9 +425,17 @@ int processCountPattern(char *logfile, GList *pchead, int pcIndex, GList **rdkec
   return 0;
 }
 
-/** @description: Generic pattern function based on pattern to call top/count
- *  @param Previous log file out, current log file, node head, node count
- *  @return
+/**
+ * @brief Generic pattern function based on pattern to call top/count or using ccsp message bus.
+ *
+ * @param[in]  prev_file    The previous log file.
+ * @param[in]  logfile      The current log file.
+ * @param[in]  rdkec_head   RDK errorcode head
+ * @param[in]  pchead       Node head
+ * @param[in]  pcIndex      Node count
+ *
+ * @return Returns status on operation.
+ * @retval Returns 0 upon success.
  */
 int processPattern(char **prev_file, char *logfile, GList **rdkec_head, GList *pchead, int pcIndex)
 {
@@ -415,9 +486,13 @@ int processPattern(char **prev_file, char *logfile, GList **rdkec_head, GList *p
 }
 
 
-/** @description: Function like strstr but based on the string delimiter
- *  @param string, delimiter
- *  @return first string based on delimiter in first call and goes on, NULL at the end
+/**
+ * @brief Function like strstr but based on the string delimiter.
+ *
+ * @param[in] str    String.
+ * @param[in] delim  Delimiter.
+ *
+ * @return Returns the output string.
  */
 char *strSplit(char *str, char *delim) {
   static char *next_str;
@@ -444,9 +519,14 @@ char *strSplit(char *str, char *delim) {
   return ret;
 }
 
-/** @description: To get node data type based on the pattern
- *  @param filename, header and data type out
- *  @return
+/**
+ * @brief To get node data type based on pattern.
+ *
+ * @param[in]  filename   Conf filename.
+ * @param[in]  header     node header.
+ * @param[out] dtype      Data type
+ *
+ * @return Returns status of operation.
  */
 int getDType(char *filename, char *header, DType_t *dtype)
 {
@@ -467,9 +547,15 @@ int getDType(char *filename, char *header, DType_t *dtype)
   }
 }
 
-/** @description: Main logic function to parse sorted file and to process the pattern list
- *  @param filename
- *  @return -1 on failure, 0 on success
+/**
+ * @brief Main logic function to parse sorted MAP file and to process pattern list.
+ *
+ * MAP file is of the form $header<#=#>$content<#=#>$logFileName<#=#>$skipInterval.
+ *
+ * @param[in] fname    Configuration file.
+ *
+ * @return Returns status of the operation.
+ * @retval Return 0 upon success, -1 on failure.
  */
 int parseFile(char *fname)
 {
@@ -571,9 +657,13 @@ int parseFile(char *fname)
   return 0;
 }
 
-/** @description: main function
- *  @param command line arguments (Expected: sorted file)
- *  @return parseFile() function return code
+/**
+ * @brief Main Function.
+ *
+ * @param[in] Command line arguments(Sorted pattern conf file, previous  log path, Custom persistent path).
+ *
+ * @return Returns status of the operation.
+ * @retval Returns the return code of parseFile function.
  */
 int main(int argc, char *argv[]) {
   char *fname = NULL;
@@ -609,6 +699,8 @@ int main(int argc, char *argv[]) {
   }
   return rc;
 }
+
+/** @} */  //END OF GROUP DCA_APIS
 
 
 /** @} */

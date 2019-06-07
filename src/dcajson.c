@@ -38,6 +38,22 @@
 
 #include "dcautils.h"
 
+/**
+ * @addtogroup DCA_APIS
+ * @{
+ */
+
+
+/**
+ * @brief This API creates "searchResult" JSON array.
+ *
+ * The search result list contains collection of telemetry marker headers with their value.
+ *
+ * Eg: {"searchResult":[{"MOCA_INFO_pnc_enabled":"1"},{"samv2_boardver_split":" V3.0 ##"},{"RF_ERR_DS_lockfail":"1"},{"RF_ERR_T3_timeout":"2"}]}
+ *
+ * @param[out] root  JSON object 
+ * @param[in]  sr    Search result JSON array
+ */
 void initSearchResultJson(cJSON **root, cJSON **sr)
 {
   *root = cJSON_CreateObject();
@@ -46,6 +62,12 @@ void initSearchResultJson(cJSON **root, cJSON **sr)
   }
 }
 
+/**
+ * @brief This API is to append the key/value pair to the SearchResult JSON array .
+ *
+ * @param[in]  key     marker name 
+ * @param[in]  value   metric count
+ */
 void addToSearchResult(char *key, char *value)
 {
   if (NULL != SEARCH_RESULT_JSON) {
@@ -57,11 +79,23 @@ void addToSearchResult(char *key, char *value)
   }
 }
 
+/**
+ * @brief This API deletes the result JSON object.
+ *
+ * @param[in]  root JSON object to be deleted. 
+ */
 void clearSearchResultJson(cJSON **root)
 {
     cJSON_Delete(*root);
 }
 
+/**
+ * @brief This API is to print Json result.
+ *
+ * @param[in]  root JSON object.
+ *
+ * @return Returns the status of the operation. 
+ */
 int printJson(cJSON *root)
 {
     if (NULL != root) {
@@ -72,6 +106,8 @@ int printJson(cJSON *root)
       }
     }
 }
+
+/** @} */  //END OF GROUP DCA_APIS
 
 /** @} */
 
