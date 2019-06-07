@@ -17,14 +17,33 @@
 #define print_message
 #endif
 
+
+/**
+ * @addtogroup DCA_TYPES
+ * @{
+ */
+
 #define CCSP_BUS_CLIENT "ccsp.busclient"
 #define CCSP_BUS_CFG  CCSP_MSG_BUS_CFG /* OR /tmp/ccsp_msg.cfg */
 #define DST_COMP_CR "com.cisco.spvtg.ccsp.CR"
 #define DST_COMP_SUBSYS "eRT."
 #define DST_COMP_ID DST_COMP_SUBSYS DST_COMP_CR /* eRT.com.cisco.spvtg.ccsp.CR */
 
+/* @} */ // End of group DCA_TYPES
+
 void *ccsp_bus_handle = NULL;
 
+/**
+ * @addtogroup DCA_APIS
+ * @{
+ */
+
+/**
+ * @brief This API initalizes the ccsp message bus.
+ *
+ * @return  Returns status of operation.
+ * @retval  Returns zero on success, appropiate errorcode otherwise.
+ */
 int ccsp_handler_init()
 {
    int ret = 0;
@@ -43,12 +62,21 @@ int ccsp_handler_init()
    return ret;
 }
 
+/**
+ * @brief This API is to uninitialize message bus.
+ */
 void ccsp_handler_exit()
 {
     CCSP_Message_Bus_Exit(ccsp_bus_handle);
     ccsp_bus_handle = NULL;
 }
 
+/**
+ * @brief This API is to retrieve the value of TR181 telemetry. 
+ *
+ * @return  Returns status of operation.
+ * @retval  Returns zero on success, appropiate errorcode otherwise.
+ */
 int get_tr181param_value( const char* path_namespace, char* parm_value, int len)
 {
     int ret = 0;
@@ -93,3 +121,5 @@ int get_tr181param_value( const char* path_namespace, char* parm_value, int len)
     
     return 0;
 }
+
+/** @} */  //END OF GROUP DCA_APIS

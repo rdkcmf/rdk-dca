@@ -41,7 +41,10 @@
 
 int getCpuUsage(char * cpuUtil);
 
-
+/**
+ * @addtogroup DCA_APIS
+ * @{
+ */
 int main()
 {
 	 char cpuUsage[MAXLEN] = {'\0'};
@@ -58,9 +61,13 @@ int main()
 	 return 0;
 }
 
-/** @description: To get cpu usage of the device.
- *  @param cpuUtil cpuusage of device.
- *  @return 1 on success.
+/**
+ * @brief To get CPU  usage of the device.
+ *
+ * @param[out] cpuUtil  CPU usage of the device.
+ *
+ * @return  Returns status of operation.
+ * @retval  Return 1 on success.
  */
 int getCpuUsage(char * cpuUtil)
 {
@@ -110,6 +117,8 @@ int getCpuUsage(char * cpuUtil)
 		return 0;
 	}
 }
+
+/** @} */  //END OF GROUP DCA_APIS
 
 /** @} */
 

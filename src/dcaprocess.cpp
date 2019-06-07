@@ -102,9 +102,19 @@ int main(int argc,char *argv[]) {
     return 1;
 }
 
-/** @description: To get the reserve memory of a given process.
- *  @parm pInfo - process name .
- *  @return reserve memory of the requested process.
+/**
+ * @addtogroup DCA_APIS
+ * @{
+ */
+
+
+/**
+ * @brief To get the reserve memory of a given process in pages.
+ *
+ * @param[in] pInfo           Process Name.
+ * @param[in] processPid      Process Id.
+ *
+ * @return Returns reserve memory of the requested process.
  */
 char* getResidentMemory(procMemCpuInfo *pInfo, int* processPid)
 {
@@ -236,12 +246,15 @@ typedef struct proc_info {
   unsigned int  rss;
 } procinfo;
 
-/** @description: To get process information of the process.
- *  @parm pid process id of process.
- *  @param pinfo address of process object of process.
- *  @return true on success.
+/**
+ * @brief To get process information of the process.
+ *
+ * @param[in] pid        Process Id of process.
+ * @param[in] pinfo      Address of process object of process.
+ *
+ * @return  Returns status of operation.
+ * @retval  True on success.
  */
-
 bool getProcInfo(int pid, procinfo * pinfo)
 {
 	char szFileName [CMD_LEN],szStatStr [2048],*s, *t;
@@ -309,11 +322,13 @@ bool getProcInfo(int pid, procinfo * pinfo)
 	return true;
 }
 
-
-
-/** @description: To get total cpu time of the device.
- *  @param totalTime  total time of device.
- *  @return true on success.
+/**
+ * @brief To get total CPU time of the device.
+ *
+ * @param[in] totalTime    Total time of device.
+ *
+ * @return  Returns status of operation.
+ * @retval  True on success.
  */
 int getTotalCpuTimes(int * totalTime)
 {
@@ -335,10 +350,14 @@ int getTotalCpuTimes(int * totalTime)
 	return true;
 }
 
-/** @description: To get process cpu utilization of the process.
- *  @parm pid process id of process.
- *  @param procCpuUtil  process cpu utilization of process.
- *  @return true on success.
+/**
+ * @brief To get process CPU utilization of the process.
+ *
+ * @param[in] pid              Process id of process.
+ * @param[in] procCpuUtil      Process cpu utilization of process.
+ *
+ * @return  Returns status of operation.
+ * @retval  True on success.
  */
 bool getProcessCpuUtilization(int pid, int *procCpuUtil)
 {
@@ -445,6 +464,8 @@ int main(int argc,char *argv[]) {
 
 
 #endif //ENABLE_XCAM_SUPPORT
+
+/** @} */  //END OF GROUP DCA_APIS
 
 /** @} */
 

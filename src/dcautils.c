@@ -39,9 +39,17 @@
 
 #define EC_BUF_LEN 20
 
-/** @description: To get load average of system
- *  @param loadAvg
- *  @return 1 on success.
+/**
+ * @addtogroup DCA_APIS
+ * @{
+ */
+
+
+/**
+ * @brief This API is to find the load average of system and add it to the SearchResult JSON.
+ *
+ * @return  Returns status of operation.
+ * @retval  Return 1 on success.
  */
 int getLoadAvg()
 {
@@ -64,9 +72,12 @@ int getLoadAvg()
   return 1;
 }
 
-/** @description: To get file size
- *  @param file
- *  @return size
+/**
+ * @brief This function returns file size.
+ *
+ * @param[in] fp    File name
+ *
+ * @return  Returns size of file.
  */
 static int fsize(FILE *fp) {
   int prev = ftell(fp);
@@ -76,9 +87,8 @@ static int fsize(FILE *fp) {
   return sz;
 }
 
-/** @description: To clear/free the global paths
- *  @param none
- *  @return none
+/**
+ * @brief This function is to clear/free the global paths.
  */
 void clearConfVal(void)
 {
@@ -92,9 +102,8 @@ void clearConfVal(void)
     free(DEVICE_TYPE);
 }
 
-/** @description: To update current execution count
- *  @param none
- *  @return none
+/** 
+ * @brief  To update current dca execution count
  */
 void updateExecCounter()
 {
@@ -123,9 +132,12 @@ void updateExecCounter()
   return;
 }
 
-/** @description: To verify whether to skip current execution or not for pattern check
- *  @param skipInterval
- *  @return none
+/**
+ *  @brief This API is to verify whether to skip this telemetry marker.
+ *
+ *  @param[in] skipInterval Polling frequency
+ *
+ *  @return Retuns 0 or 1 depening upon the polling frequency.
  */
 int isSkipParam(int skipInterval)
 {
@@ -145,10 +157,14 @@ int isSkipParam(int skipInterval)
   return rval;
 }
 
-
-/** @description: To read rotated log file
- *  @param none
- *  @return none
+/**
+ *  @brief Function to return rotated log file.
+ *
+ *  @param[in] buf       Buffer
+ *  @param[in] buflen    Maximum buffer length
+ *  @param[in] name      Current Log file 
+ *
+ *  @return Returns Seek Log file. 
  */
 char *getsRotatedLog(char *buf, int buflen, char *name)
 {
@@ -292,9 +308,11 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
   return rval;
 }
 
-/** @description: To update the values from the include.properties
- *  @param none
- *  @return none
+/**
+ *  @brief Function to update the global paths like PERSISTENT_PATH,LOG_PATH from include.properties file.
+ *
+ *  @param[in] logpath   Log file path
+ *  @param[in] perspath  Persistent path
  */
 void updateIncludeConfVal(char *logpath, char *perspath)
 {
@@ -349,9 +367,11 @@ void updateIncludeConfVal(char *logpath, char *perspath)
   }
 }
 
-/** @description: To update the configuration values from the device.properties
- *  @param none
- *  @return none
+/**
+ *  @brief Function to update the configuration values from device.properties file.
+ *
+ *  @param[in] logpath   Log file path
+ *  @param[in] perspath  Persistent path
  */
 void updateConfVal(char *logpath, char *perspath)
 {
@@ -440,6 +460,15 @@ void updateConfVal(char *logpath, char *perspath)
 
 }
 
+/**
+ *  @brief Function to read the rotated Log file.
+ *
+ *  @param[in] name        Log file name.
+ *  @param[in] seek_value  Position to seek.
+ *
+ *  @return Returns the status of the operation.
+ *  @retval Returns -1 on failure, appropriate errorcode otherwise.
+ */
 int readLogSeek(char *name, long *seek_value)
 {
   int rc = -1;
@@ -461,6 +490,15 @@ int readLogSeek(char *name, long *seek_value)
   return rc;
 }
 
+/**
+ *  @brief Function to write the rotated Log file.
+ *
+ *  @param[in] name        Log file name.
+ *  @param[in] seek_value  Position to seek.
+ *
+ *  @return Returns the status of the operation.
+ *  @retval Returns -1 on failure, appropriate errorcode otherwise.
+ */
 void writeLogSeek(char *name, long seek_value)
 {
   if (NULL != name && NULL != PERSISTENT_PATH) {
@@ -478,6 +516,8 @@ void writeLogSeek(char *name, long seek_value)
     }
   }
 }
+
+/** @} */  //END OF GROUP DCA_APIS
 
 /** @} */
 

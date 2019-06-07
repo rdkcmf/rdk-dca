@@ -53,15 +53,20 @@
 
 #include "dcautils.h"
 
+/**
+ * @addtogroup DCA_TYPES
+ * @{
+ */
+
 #define MEM_KEY_PREFIX "mem_"
 #define CPU_KEY_PREFIX "cpu_"
 
 typedef struct proc_info {
-  int           utime;                    /** user mode jiffies **/
-  int           stime;                    /** kernel mode jiffies **/
-  int		cutime;                   /** user mode jiffies with childs **/
-  int           cstime;                   /** kernel mode jiffies with childs **/
-  unsigned int  rss;                      /** Resident Set Size **/
+  int           utime;                    /**< User mode jiffies */
+  int           stime;                    /**< Kernel mode jiffies */
+  int		cutime;                   /**< User mode jiffies with childs */
+  int           cstime;                   /**< Kernel mode jiffies with childs */
+  unsigned int  rss;                      /**< Resident Set Size */
 } procinfo;
 
 typedef struct _procMemCpuInfo {
@@ -72,10 +77,26 @@ typedef struct _procMemCpuInfo {
   int total_instance;
 } procMemCpuInfo;
 
+/* @} */ // End of group DCA_TYPES
+
+
 int getProcInfo(procMemCpuInfo *pInfo);
 int getMemInfo(procMemCpuInfo *pmInfo);
 int getCPUInfo(procMemCpuInfo *pInfo);
 
+/**
+ * @addtogroup DCA_APIS
+ * @{
+ */
+
+/**
+ * @brief To get process usage.
+ *
+ * @param[in] processName   Process name.
+ *
+ * @return  Returns status of operation.
+ * @retval  0 on sucess, appropiate errorcode otherwise.
+ */
 int getProcUsage(char *processName) {
   if (processName != NULL) {
     procMemCpuInfo pInfo;
@@ -168,12 +189,17 @@ int getProcUsage(char *processName) {
   return 0;
 }
 
-/** @description: To get process information of the process.
- *  @parm pid process id of process.
- *  @param pinfo address of process object of process.
- *  @return 1 on success.
+/**
+ * @brief To get status of a process from its process ID. 
+ *
+ * This will return information such as process priority, virtual memory size, signals etc.
+ *
+ * @param[in] pid      PID value of the  process.
+ * @param[in] pinfo    Process info.
+ *
+ * @return  Returns status of operation.
+ * @retval  Return 1 on success, appropiate errorcode otherwise.
  */
-
 int getProcPidStat(int pid, procinfo * pinfo)
 {
   char szFileName [CMD_LEN],szStatStr [2048],*s, *t;
@@ -266,9 +292,13 @@ int getProcPidStat(int pid, procinfo * pinfo)
   return 1;
 }
 
-/** @description: To get cpu and mem info
- *  @parm pInfo - procMemCpuInfo
- *  @return 1 on success.
+/**
+ * @brief To get CPU and mem info.
+ *
+ * @param[out] pmInfo  Memory/CPU Info.
+ *
+ * @return  Returns status of operation.
+ * @retval  Return 1 on success.
  */
 int getProcInfo(procMemCpuInfo *pmInfo)
 {
@@ -282,9 +312,13 @@ int getProcInfo(procMemCpuInfo *pmInfo)
 }
 
 
-/** @description: To get the reserve memory of a given process.
- *  @parm pInfo - procMemCpuInfo
- *  @return 1 on success.
+/**
+ * @brief To get the reserve memory of a given process.
+ *
+ * @param[out] pmInfo  Memory  Info.
+ *
+ * @return  Returns status of operation.
+ * @retval  Return 1 on success.
  */
 int getMemInfo(procMemCpuInfo *pmInfo)
 {
@@ -320,7 +354,14 @@ int getMemInfo(procMemCpuInfo *pmInfo)
 }
 
 #ifndef ENABLE_XCAM_SUPPORT
-
+/**
+ * @brief To get CPU info.
+ *
+ * @param[out] pInfo  CPU info.
+ *
+ * @return  Returns status of operation.
+ * @retval  Return 1 on success,appropiate errorcode otherwise.
+ */
 int getCPUInfo(procMemCpuInfo *pInfo)
 {
   int ret = 0;
@@ -401,9 +442,13 @@ int getCPUInfo(procMemCpuInfo *pInfo)
 
 #else //ENABLE_XCAM_SUPPORT
 
-/** @description: To get total cpu time of the device.
- *  @param totalTime  total time of device.
- *  @return 1 on success.
+/**
+ * @brief To get total CPU time of the device.
+ *
+ * @param[out] totalTime   Total time of device.
+ *
+ * @return  Returns status of operation.
+ * @retval  Return 1 on success, appropiate errorcode otherwise.
  */
 int getTotalCpuTimes(int * totalTime)
 {
@@ -425,10 +470,14 @@ int getTotalCpuTimes(int * totalTime)
   return 1;
 }
 
-/** @description: To get process cpu utilization of the process.
- *  @parm pid process id of process.
- *  @param procCpuUtil  process cpu utilization of process.
- *  @return 1 on success.
+/**
+ * @brief To get process CPU utilization of the process.
+ *
+ * @param[in]  pid            Process id.
+ * @param[out] procCpuUtil    CPU utilization of process.
+ *
+ * @return  Returns status of operation.
+ * @retval  Return 1 on success, appropiate errorcode otherwise.
  */
 int getProcessCpuUtilization(int pid, int *procCpuUtil)
 {
@@ -501,6 +550,8 @@ int getCPUInfo(procMemCpuInfo *pmInfo) {
 }
 
 #endif //ENABLE_XCAM_SUPPORT
+
+/** @} */  //END OF GROUP DCA_APIS
 
   /** @} */
 
