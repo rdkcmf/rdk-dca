@@ -21,7 +21,8 @@ AC_INIT(dca, 1.0, Vargheese_Baby@cable.comcast.com)
 AC_CONFIG_SRCDIR([src])
 AM_INIT_AUTOMAKE([foreign no-dist-gzip dist-bzip2 1.9])
 LT_INIT
-
+LIBSYSWRAPPER_FLAG=" "
+IS_LIBSYSWRAPPER_ENABLED=" "
 
 dnl Checks for programs.
 AC_PROG_CXX
@@ -36,6 +37,19 @@ m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])],
   [AM_DEFAULT_VERBOSITY=1
    AC_SUBST(AM_DEFAULT_VERBOSITY)])
 
+AC_ARG_ENABLE([libsyswrapper],
+        AS_HELP_STRING([--enable-wrapper],[enables system wrapper replacement (default is no)]),
+        [
+          case "${enableval}" in
+           yes) IS_LIBSYSWRAPPER_ENABLED=true
+                LIBSYSWRAPPER_FLAG=" -DLIBSYSWRAPPER_BUILD ";;
+           no)  IS_LIBSYSWRAPPER_ENABLED=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-wrapper]) ;;
+           esac
+           ],
+        [echo "libsyswrapper is disabled"])
+AM_CONDITIONAL([IS_LIBSYSWRAPPER_ENABLED], [test x$IS_LIBSYSWRAPPER_ENABLED = xtrue])
+AC_SUBST(LIBSYSWRAPPER_FLAG)
 
 dnl **********************************
 dnl checks for dependencies
