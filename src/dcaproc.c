@@ -57,6 +57,9 @@
  * @addtogroup DCA_TYPES
  * @{
  */
+#ifdef LIBSYSWRAPPER_BUILD
+#include "secure_wrapper.h"
+#endif
 
 #define MEM_KEY_PREFIX "mem_"
 #define CPU_KEY_PREFIX "cpu_"
@@ -112,7 +115,11 @@ int getProcUsage(char *processName) {
     memcpy(pInfo.processName, processName, strlen(processName)+1); 
 
     sprintf(pidofCommand, "pidof %s", processName);
+#ifdef LIBSYSWRAPPER_BUILD
+    if (!(cmdPid = v_secure_popen("r", "pidof %s", processName)))
+#else
     if (!(cmdPid = popen(pidofCommand, "r")))
+#endif
     {
       LOG("Failed to execute %s", pidofCommand);
       return 0;
@@ -121,7 +128,11 @@ int getProcUsage(char *processName) {
     pid = (int *) malloc (sizeof(pid_t));
     if ( NULL == pid )
     {
+#ifdef LIBSYSWRAPPER_BUILD
+        v_secure_pclose(cmdPid);
+#else
         pclose(cmdPid);
+#endif
         return 0;
     }
     *pid=0;
@@ -137,7 +148,11 @@ int getProcUsage(char *processName) {
         {
            if(pid)
                 free(pid);
-           pclose(cmdPid);
+#ifdef LIBSYSWRAPPER_BUILD
+                v_secure_pclose(cmdPid);
+#else
+                pclose(cmdPid);
+#endif
            return 0;
         }
         pid=temp;
@@ -147,13 +162,21 @@ int getProcUsage(char *processName) {
     if ((*pid) <= 0)
     {
         free(pid);
+#ifdef LIBSYSWRAPPER_BUILD
+        v_secure_pclose(cmdPid);
+#else
         pclose(cmdPid);
+#endif
         return 0;
     }
 
     pInfo.total_instance=index;
     pInfo.pid=pid;
+#ifdef LIBSYSWRAPPER_BUILD
+    v_secure_pclose(cmdPid);
+#else
     pclose(cmdPid);
+#endif
 
     if(0 != getProcInfo(&pInfo))
     {
