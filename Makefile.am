@@ -17,3 +17,10 @@
 # limitations under the License.
 ##########################################################################
 SUBDIRS = src
+
+bin_PROGRAMS = dca
+dca_SOURCES = dcamain.c
+dca_CFLAGS = -I${top_srcdir}/src
+dca_LDADD = ${top_builddir}/src/libdcautils.la
+
+dca_DEPENDENCIES = ${top_builddir}/src/libdcautils.la
