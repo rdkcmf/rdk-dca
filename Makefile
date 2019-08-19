@@ -39,13 +39,13 @@ LIBS += -L$(GLIB_CONFIG_PATH) \
 LDFLAGS += $(LIBS)
 CFLAGS += $(INCLUDE)
 
-all:src/dca.c
-	$(CC) $(CFLAGS) $(LDFLAGS)  src/dca.c src/dcalist.c src/dcajson.c src/dcaproc.c src/dcautils.c -o dca
+all:dcamain.c
+	$(CC) $(CFLAGS) $(LDFLAGS) dcamain.c src/dca.c src/dcalist.c src/dcajson.c src/dcaproc.c src/dcautils.c -o dca
 	$(CC)  src/dcamem.c -o dcamem
 	$(CC)  src/dcacpu.c -o dcacpu
 	$(GXX) $(CFLAGS) src/dcaprocess.cpp -o dcaprocess
-build:src/dca.c
-	$(CC) $(CFLAGS) $(LDFLAGS) src/dca.c src/dcalist.c src/dcajson.c src/dcaproc.c src/dcautils.c -o dca
+build:dcamain.c
+	$(CC) $(CFLAGS) $(LDFLAGS) dcamain.c src/dca.c src/dcalist.c src/dcajson.c src/dcaproc.c src/dcautils.c -o dca
 	$(CC)  src/dcamem.c -o dcamem
 	$(CC)  src/dcacpu.c -o dcacpu
 	$(GXX) $(CFLAGS) src/dcaprocess.cpp -o dcaprocess

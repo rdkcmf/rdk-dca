@@ -55,6 +55,8 @@
 
 #include "dcautils.h"
 #include "dcalist.h"
+#include "dcaInternal.h"
+#include "vector.h"
 
 #ifdef USE_TR181_CCSP_MESSAGEBUS
 #include "dcatr181.h"
@@ -571,7 +573,7 @@ int getDType(char *filename, char *header, DType_t *dtype)
  * @return Returns status of the operation.
  * @retval Return 0 upon success, -1 on failure.
  */
-int parseFile(char *fname)
+int parseDcaSortedConfFile(char *fname)
 {
   FILE *sfp = NULL;
   char line[MAXLINE];
@@ -672,15 +674,114 @@ int parseFile(char *fname)
   return 0;
 }
 
-/**
- * @brief Main Function.
- *
- * @param[in] Command line arguments(Sorted pattern conf file, previous  log path, Custom persistent path).
- *
- * @return Returns status of the operation.
- * @retval Returns the return code of parseFile function.
+/** @description: Main logic function to parse sorted file and to process the pattern list
+ *  @param filename
+ *  @return -1 on failure, 0 on success
  */
-int main(int argc, char *argv[]) {
+int
+parseMarkerList (Vector* vMarkerList) {
+
+    printf("%s ++in \n", __FUNCTION__);
+
+    size_t vSize = vMarkerList->capacity;
+    size_t vCount = vMarkerList->count;
+    GrepMarker** markerList = (GrepMarker**) vMarkerList->data;
+    int var = 0;
+
+    printf("vMarkerList is of count = %d , vSize(ie vector capacity) = %d \n", vCount, vSize);
+    char line[MAXLINE];
+    char *filename = NULL, *prevfile = NULL;
+    int pcIndex = 0;
+    GList *pchead = NULL, *rdkec_head = NULL;
+
+    // Use vector api's for traversing through the data
+
+    for (var = 0; var < vCount; ++var) {
+        int tmp_skip_interval, is_skip_param;
+        if (markerList[var] == NULL) {
+            printf("markerList[var] is NULL \n");
+            continue;
+        }
+
+        char *temp_header = markerList[var]->markerName;
+        char *temp_pattern = markerList[var]->searchString;
+        char *temp_file = markerList[var]->logFile;
+        tmp_skip_interval = markerList[var]->skipFreq;
+
+        DType_t dtype;
+
+        if (NULL == temp_file || NULL == temp_pattern || NULL == temp_header) continue;
+
+        if ((0 == strcmp(temp_pattern, "")) || (0 == strcmp(temp_file, ""))) continue;
+
+        if (0 == strcasecmp(temp_file, "snmp")) continue;
+
+        getDType(temp_file, temp_header, &dtype);
+
+        if (tmp_skip_interval <= 0) tmp_skip_interval = 0;
+
+        is_skip_param = isSkipParam(tmp_skip_interval);
+
+        if (NULL == filename) {
+            filename = malloc(strlen(temp_file) + 1);
+            pchead = NULL;
+            if (is_skip_param == 0
+                    && (0 == insertPCNode(&pchead, temp_pattern, temp_header, dtype, 0, NULL))) {
+                pcIndex = 1;
+            }
+        } else {
+            if ((0 == strcmp(filename, temp_file)) && pcIndex <= MAX_PROCESS) {
+                if (is_skip_param == 0
+                        && (0 == insertPCNode(&pchead, temp_pattern, temp_header, dtype, 0, NULL))) {
+                    pcIndex++;
+                }
+            } else {
+                char *tmp = NULL;
+                processPattern(&prevfile, filename, &rdkec_head, pchead, pcIndex);
+                pchead = NULL;
+                tmp = realloc(filename, strlen(temp_file) + 1);
+                if (NULL != tmp) {
+                    filename = tmp;
+                } else {
+                    free(filename);
+                    filename = NULL;
+                }
+                if (is_skip_param == 0
+                        && (0 == insertPCNode(&pchead, temp_pattern, temp_header, dtype, 0, NULL))) {
+                    pcIndex = 1;
+                }
+            }
+        }
+        if (NULL != filename) {
+            strcpy(filename, temp_file);
+        }
+        usleep(USLEEP_SEC);
+    }
+    processPattern(&prevfile, filename, &rdkec_head, pchead, pcIndex);
+    writeLogSeek(filename, LAST_SEEK_VALUE);
+    pchead = NULL;
+
+    /* max limit not maintained for rdkec_head FIXME */
+    if (NULL != rdkec_head) {
+        addToJson(rdkec_head);
+        // clear nodes memory after process
+        clearPCNodes(&rdkec_head);
+        rdkec_head = NULL;
+    }
+
+    if (NULL != filename) free(filename);
+
+    if (NULL != prevfile) free(prevfile);
+
+    printf("%s ++out \n", __FUNCTION__);
+    return 0;
+}
+
+/** @description: main function
+ *  @param command line arguments (Expected: sorted file)
+ *  @return parseFile() function return code
+ */
+int displayLogGrepResults(int argc, char *argv[]) {
   char *fname = NULL;
   char *logPath = NULL;
   char *persistentPath = NULL;
@@ -707,7 +808,7 @@ int main(int argc, char *argv[]) {
     updateConfVal(logPath, persistentPath);
     updateExecCounter();
     initSearchResultJson(&ROOT_JSON, &SEARCH_RESULT_JSON);
-    rc = parseFile(fname);
+    rc = parseDcaSortedConfFile(fname);
     printJson(ROOT_JSON);
     clearSearchResultJson(&ROOT_JSON);
     clearConfVal();
@@ -717,6 +818,30 @@ int main(int argc, char *argv[]) {
 
 /** @} */  //END OF GROUP DCA_APIS
 
+
+/** @description: main function
+ *  @param command line arguments (Expected: sorted file)
+ *  @return parseFile() function return code
+ */
+int
+getDCAResults (void* markerList, cJSON** grepResultList) {
+    char *logPath = NULL;
+    char *persistentPath = NULL;
+
+    printf("getDCAResults ++in \n");
+    Vector* vecMarkerList = (Vector*) markerList;
+    int rc = -1;
+    if (NULL != markerList) {
+        updateConfVal(logPath, persistentPath);
+        updateExecCounter();
+        initSearchResultJson(&ROOT_JSON, &SEARCH_RESULT_JSON);
+        rc = parseMarkerList(markerList);
+        *grepResultList = ROOT_JSON;
+        clearConfVal( );
+    }
+    printf("getDCAResults ++out \n");
+    return rc;
+}
 
 /** @} */
 
