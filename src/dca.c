@@ -108,15 +108,13 @@ static void appendData( pcdata_t* dst, const char* src)
     } else {
       LOG("Failed to allocate memory for telemetry node data\n");
     }
-  } else { //Append data ('\0' terminated)
-    // TR181 multi-instance: Adds a unique delimiter
-    dst_len = strlen(dst->data);
-    src_len = sizeof(TR181_ARRAY_ELEMENT_DELIMITER) + strlen(src); // includes a terminating '\0'
+  } else { //Append data
+    dst_len = strlen(dst->data) + 1;
+    src_len = strlen(src) + 1;
     dst->data = (char*)realloc(dst->data, dst_len+src_len);
     if(NULL != dst->data) {
-      // (snprintf includes a string termintaor)
-      snprintf((dst->data)+dst_len, src_len, "%s%s", TR181_ARRAY_ELEMENT_DELIMITER,src);
-
+      strncat(dst->data, ",", 1);
+      snprintf((dst->data)+dst_len, src_len, "%s", src);
     } else {
       LOG("Failed to re-allocate memory for telemetry node data\n");
     }
@@ -165,8 +163,6 @@ static int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
             }
           } else { //Multi-instance check
             first_tck = tck;
-            // TR181 multi-instance:
-            tmp->pattern_type = TR181_MULTI_INSTANCE; // 'OTHER' is the default
             //Check for a next multi-instance token
             tck = strstr(tck+DELIMITER_SIZE, OBJ_DELIMITER);
             if(NULL == tck) {
@@ -209,9 +205,6 @@ static int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
 }
 #endif
 
-
-
-
 int addToJson(GList *pchead)
 {
   GList *tlist = pchead;
@@ -225,21 +218,11 @@ int addToJson(GList *pchead)
             if (tmp->count != 0) {
               char tmp_str[5] = {0};
               sprintf(tmp_str, "%d", tmp->count);
-              // TR181 multi-instance: 
-              if (tmp->pattern_type == TR181_MULTI_INSTANCE) {
-                addToSearchResultTr181MultiInstance(tmp->header, tmp_str);
-              } else {
-                addToSearchResult(tmp->header, tmp_str);
-              }
+              addToSearchResult(tmp->header, tmp_str);
             }
           } else if(tmp->d_type == STR) {
-            if (NULL != tmp->data && (strcmp(tmp->data, "0") != 0)) { 
-              if (tmp->pattern_type == TR181_MULTI_INSTANCE) {
-                addToSearchResultTr181MultiInstance(tmp->header, tmp->data);
-              } else {
-                addToSearchResult(tmp->header, tmp->data);
-              }
-
+            if (NULL != tmp->data && (strcmp(tmp->data, "0") != 0)) {
+              addToSearchResult(tmp->header, tmp->data);
             }
           }
         }
@@ -247,8 +230,6 @@ int addToJson(GList *pchead)
     tlist = g_list_next(tlist);
   }
 }
-
-
 
 /** @description: Process pattern if it has split text in the header
  *  @param log file matched line, node
@@ -566,7 +547,6 @@ int parseFile(char *fname)
     }
     usleep(USLEEP_SEC);
   }
-  
   processPattern(&prevfile, filename, &rdkec_head, pchead, pcIndex);
   writeLogSeek(filename, LAST_SEEK_VALUE);
   pchead = NULL;

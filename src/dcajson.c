@@ -56,27 +56,6 @@ void addToSearchResult(char *key, char *value)
     }
   }
 }
-// TR181 multi-instance delimiting in Json array
-void addToSearchResultTr181MultiInstance(char *key, char *value)
-{
-  
-  cJSON *obj = cJSON_CreateObject();
-  cJSON *tr181_values = cJSON_CreateArray();
-  char  *next_tr181_value = strSplit(value, DELIMITER);
-
-  if ((NULL == SEARCH_RESULT_JSON) || (NULL == obj) || (NULL == tr181_values)) return; 
-
-  // Using the special delimiter, unroll the string into an array
-  while(NULL !=next_tr181_value) {
-      cJSON_AddItemToArray(tr181_values, cJSON_CreateString(next_tr181_value));
-      next_tr181_value = strSplit(NULL, DELIMITER);
-  }
-
-  cJSON_AddItemToObject(obj, key, tr181_values);
-  cJSON_AddItemToArray(SEARCH_RESULT_JSON, obj);
-
-}
-
 
 void clearSearchResultJson(cJSON **root)
 {
