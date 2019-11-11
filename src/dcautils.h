@@ -89,6 +89,7 @@ void writeLogSeek(char *name, long seek_value);
 int checkLogSeek(char *name, long prevSeekVal);
 int isSkipParam(int skipInterval);
 void updateExecCounter(void);
+void saveExecCounter(void);
 
 /* JSON functions */
 void initSearchResultJson(cJSON **root, cJSON **sr);
