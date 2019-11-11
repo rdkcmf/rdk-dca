@@ -822,6 +822,7 @@ getDCAResults (void* markerList, cJSON** grepResultList) {
         initSearchResultJson(&ROOT_JSON, &SEARCH_RESULT_JSON);
         rc = parseMarkerList(markerList);
         *grepResultList = ROOT_JSON;
+        saveExecCounter();
         clearConfVal( );
     }
     printf("getDCAResults ++out \n");

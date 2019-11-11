@@ -132,6 +132,19 @@ void updateExecCounter()
   return;
 }
 
+void saveExecCounter()
+{
+  FILE *ec_fp = NULL;
+  ec_fp = fopen(EXEC_COUNTER_FILENAME, "w");
+  if (NULL == ec_fp) {
+    return;
+  }
+
+  fprintf(ec_fp, "%d" , CUR_EXEC_COUNT);
+  fclose(ec_fp);
+  return;
+}
+
 /**
  *  @brief This API is to verify whether to skip this telemetry marker.
  *
