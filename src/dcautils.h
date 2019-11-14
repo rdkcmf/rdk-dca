@@ -41,7 +41,7 @@
 
 #include "cJSON.h"
 
-#define MAXLINE 1024
+#define MAXLINE 4096
 #define MAXLEN 512
 #define LEN 14
 
