@@ -21,6 +21,7 @@
 #define SRC_DCAINTERNAL_H_
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 typedef enum
 {
@@ -31,6 +32,8 @@ typedef enum
 
 typedef struct _GrepMarker
 {
+    bool reportEmptyParam;
+    char* paramType;
     char* markerName;
     char* searchString;
     char* logFile;
