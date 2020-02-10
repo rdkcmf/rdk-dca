@@ -17,23 +17,22 @@
 # limitations under the License.
 ##########################################################################
 SUBDIRS =
-lib_LTLIBRARIES = libdcautils.la
+bin_PROGRAMS = dca dcamem dcacpu
+dca_SOURCES = dca.c dcalist.c dcautils.c dcaproc.c dcajson.c
 
-libdcautils_la_SOURCES = dca.c dcalist.c dcautils.c dcaproc.c dcajson.c vector.c
-libdcautils_la_CFLAGS = $(GLIB_CFLAGS)
-libdcautils_la_LDFLAGS = $(GLIB_LIBS) $(LIBCJSON_LIBS)
+dca_CFLAGS = $(GLIB_CFLAGS)
+dca_LDFLAGS = $(GLIB_LIBS) $(LIBCJSON_LIBS)
 
 if IS_LIBSYSWRAPPER_ENABLED
-libdcautils_la_CFLAGS += $(LIBSYSWRAPPER_FLAG)
-libdcautils_la_LDFLAGS += -lsecure_wrapper
+dca_CFLAGS += $(LIBSYSWRAPPER_FLAG)
+dca_LDFLAGS += -lsecure_wrapper
 endif
 
 if ENABLE_TR181_MESSAGEBUS
-libdcautils_la_SOURCES += dcatr181.c
-libdcautils_la_CFLAGS += $(DBUS_CFLAGS) -DUSE_TR181_CCSP_MESSAGEBUS
-libdcautils_la_LDFLAGS += $(DBUS_LIBS)
+dca_SOURCES += dcatr181.c
+dca_CFLAGS += $(DBUS_CFLAGS) -DUSE_TR181_CCSP_MESSAGEBUS
+dca_LDFLAGS += $(DBUS_LIBS)
 endif
 
-bin_PROGRAMS = dcamem dcacpu
 dcamem_SOURCES = dcamem.c
 dcacpu_SOURCES = dcacpu.c
