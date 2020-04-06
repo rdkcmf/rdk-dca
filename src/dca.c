@@ -61,6 +61,7 @@
 #define TR181BUF_LENGTH 512
 #define OBJ_DELIMITER "{i}"
 #define DELIMITER_SIZE 3
+#define NOE strlen("NumberOfEntries")
 #endif
 
 /**
@@ -125,25 +126,20 @@ static void appendData( pcdata_t* dst, const char* src)
 {
   int dst_len, src_len = 0;
 
+  src_len = strlen(src) + 1;
+
   if(NULL == dst || NULL == src)
     return;
 
   //Copy data
   if(NULL == dst->data) {
-    src_len = strlen(src) + 1;
-    dst->data = (char*)malloc(src_len);
-    if (NULL != dst->data) {
-      snprintf(dst->data, src_len, "%s", src);
-    } else {
+    if((dst->data = strndup(src, src_len)) == NULL)
       LOG("Failed to allocate memory for telemetry node data\n");
-    }
   } else { //Append data
     dst_len = strlen(dst->data) + 1;
-    src_len = strlen(src) + 1;
     dst->data = (char*)realloc(dst->data, dst_len+src_len);
     if(NULL != dst->data) {
-      strncat(dst->data, ",", 1);
-      snprintf((dst->data)+dst_len, src_len, "%s", src);
+      snprintf((dst->data)+(dst_len-1), src_len+1, ",%s", src);
     } else {
       LOG("Failed to re-allocate memory for telemetry node data\n");
     }
@@ -165,9 +161,9 @@ static int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
   int ret_val, length, obj_count, i = 0;
   GList *tlist = NULL;
   pcdata_t *tmp = NULL;
-  char tr181data_buff[TR181BUF_LENGTH] = {'\0'};
-  //strlen("NumberOfEntries") = 15
-  char tr181obj_buff[TR181BUF_LENGTH + 15] = {'\0'};
+  char tr181data_buff[TR181BUF_LENGTH];
+  int bufflength = TR181BUF_LENGTH + NOE;
+  char tr181obj_buff[bufflength];
   char *tck, *first_tck = NULL;
 
   //Initialize message bus handler
@@ -213,7 +209,10 @@ static int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
                   for(i=1; i<=obj_count; i++) {
                     //Replace multi-instance token with an object instance number
                     snprintf(tr181obj_buff, (length+1), tmp->pattern);
-                    sprintf(tr181obj_buff+length, "%d%s", i, (tmp->pattern + length + DELIMITER_SIZE));
+                    ret_val = snprintf(tr181obj_buff+length, bufflength-length, "%d%s", i, (tmp->pattern + length + DELIMITER_SIZE));
+                    if (ret_val < 0 || ret_val >= (bufflength-length)) {
+                        LOG("Error: Buffer overflow - return value:%d", ret_val);
+                    }
                     ret_val = get_tr181param_value(tr181obj_buff, tr181data_buff, TR181BUF_LENGTH);
                     if(0 == ret_val) {
                       appendData(tmp, tr181data_buff);
