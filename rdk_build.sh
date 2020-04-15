@@ -54,9 +54,11 @@ export COMBINED_ROOT=$RDK_PROJECT_ROOT_PATH
 export BUILDS_DIR=$RDK_PROJECT_ROOT_PATH
 export RDK_DIR=$BUILDS_DIR
 export PLATFORM_SDK=${RDK_TOOLCHAIN_PATH}
-
+if [ "$XCAM_MODEL" == "XHB1" ]; then
+source ${RDK_PROJECT_ROOT_PATH}/build/components/sdk/setenv2
+else
 source $BUILDS_DIR/dca/soc_${RDK_PLATFORM_SOC}_env.sh
-
+fi
 # default component name
 export RDK_COMPONENT_NAME=${RDK_COMPONENT_NAME-`basename $RDK_SOURCE_PATH`}
 export DCA_PATH=$RDK_SOURCE_PATH
