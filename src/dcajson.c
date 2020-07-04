@@ -105,6 +105,8 @@ int printJson(cJSON *root)
         free(out);
       }
     }
+ /*Coverity Fix CID:18267 MISSING_RETURN */
+ return 0;
 }
 
 /** @} */  //END OF GROUP DCA_APIS

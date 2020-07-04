@@ -124,12 +124,14 @@ int processTopPattern(char *logfile, GList *pchead, int pcIndex)
  */
 static void appendData( pcdata_t* dst, const char* src)
 {
+ /* Coverity FIX CID:143052 REVERSE_INULL */
+  if(NULL == dst || NULL == src)
+    return;
+
   int dst_len, src_len = 0;
 
   src_len = strlen(src) + 1;
 
-  if(NULL == dst || NULL == src)
-    return;
 
   //Copy data
   if(NULL == dst->data) {
