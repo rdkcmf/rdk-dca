@@ -79,8 +79,11 @@ int getCpuUsage(char * cpuUtil)
 	for(i=0; i<5; i++)
 	{
 		fp = fopen("/proc/stat","r");
-		fscanf(fp,"%*s %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf",
-		&a[0],&a[1],&a[2],&a[3],&a[4],&a[5],&a[6],&a[7],&a[8],&a[9]);
+                /*Coverity Fix CID:18504 CHECKED_RETURN */
+		if( fscanf(fp,"%*s %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf",
+		&a[0],&a[1],&a[2],&a[3],&a[4],&a[5],&a[6],&a[7],&a[8],&a[9]) != 10 )
+		       printf("%s:Error in fscanf()\n",__FUNCTION__);
+
 		fclose(fp);
 		sleep(1);
 
@@ -89,9 +92,11 @@ int getCpuUsage(char * cpuUtil)
 		{
 			return 0;
 		}
-
-		fscanf(fp,"%*s %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf",
-		&b[0],&b[1],&b[2],&b[3],&b[4],&b[5],&b[6],&b[7],&b[8],&b[9]);
+                /*Coverity Fix CID:18504 CHECKED_RETURN */
+		if( fscanf(fp,"%*s %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf",
+		&b[0],&b[1],&b[2],&b[3],&b[4],&b[5],&b[6],&b[7],&b[8],&b[9]) != 10 )
+		       printf("Error in fscanf()\n");
+              
 		fclose(fp);
 
 		total_time=(b[0]+b[1]+b[2]+b[3]+b[4]+b[5]+b[6]+b[7]+b[8]+b[9])

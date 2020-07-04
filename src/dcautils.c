@@ -493,7 +493,10 @@ int readLogSeek(char *name, long *seek_value)
       strcpy(seekfile, PERSISTENT_PATH);
       strcat(seekfile, name);
       if (NULL != (fp = fopen(seekfile, "r"))) {
-          fscanf(fp, "%ld", seek_value);
+          /*Coverity Fix CID:18152 CHECKED_RETURN */
+          if( fscanf(fp, "%ld", seek_value) != 1)
+             LOG("Error in fscanf()\n");
+ 
           fclose(fp);
           rc = 0;
       }

@@ -483,9 +483,11 @@ int getTotalCpuTimes(int * totalTime)
 
   if(!fp)
     return 0;
-
-  fscanf(fp,"%*s %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf",
-      &a[0],&a[1],&a[2],&a[3],&a[4],&a[5],&a[6],&a[7],&a[8],&a[9]);
+  /*Coverity Fix CID:109162 CHECKED_RETURN */
+  if(fscanf(fp,"%*s %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf",
+      &a[0],&a[1],&a[2],&a[3],&a[4],&a[5],&a[6],&a[7],&a[8],&a[9]) != 10 )
+             LOG("Failed in fscanf()\n");
+       
   fclose(fp);
   total = (a[0]+a[1]+a[2]+a[3]+a[4]+a[5]+a[6]+a[7]+a[8]+a[9]);
   *totalTime = total;
