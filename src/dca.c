@@ -55,6 +55,9 @@
 
 #include "dcautils.h"
 #include "dcalist.h"
+#include "safec_lib.h"
+
+
 
 #ifdef USE_TR181_CCSP_MESSAGEBUS
 #include "dcatr181.h"
@@ -63,6 +66,52 @@
 #define DELIMITER_SIZE 3
 #define NOE strlen("NumberOfEntries")
 #endif
+
+
+#define NUM_OF_LOG_TYPES (sizeof(log_type_table)/sizeof(log_type_table[0]))
+
+enum logType_e {
+    TOPLOG,
+    MESSAGE_BUS,
+};
+
+typedef struct logtype_pair{
+  char                 *name;
+  enum logType_e   type;
+} LOGTYPE_PAIR;
+
+LOGTYPE_PAIR log_type_table[] = {
+  { "top_log.txt",   TOPLOG  },
+#ifdef USE_TR181_CCSP_MESSAGEBUS
+  {"<message_bus>",  MESSAGE_BUS  },
+#endif
+};
+
+int get_log_type_from_name(char *name, enum logType_e *type_ptr)
+{
+  errno_t rc = -1;
+  int ind = -1;
+  int i = 0;
+  size_t strsize = 0;
+
+  if((name == NULL) || (type_ptr == NULL))
+     return 0;
+
+  strsize = strlen(name);
+
+  for (i = 0 ; i < NUM_OF_LOG_TYPES ; ++i)
+  {
+      rc = strcmp_s(name, strsize, log_type_table[i].name, &ind);
+      ERR_CHK(rc);
+      if((rc == EOK) && (!ind))
+      {
+          *type_ptr = log_type_table[i].type;
+          return 1;
+      }
+  }
+  return 0;
+}
+
 
 /**
  * @addtogroup DCA_TYPES
@@ -125,22 +174,30 @@ int processTopPattern(char *logfile, GList *pchead, int pcIndex)
 static void appendData( pcdata_t* dst, const char* src)
 {
  /* Coverity FIX CID:143052 REVERSE_INULL */
+
   if(NULL == dst || NULL == src)
     return;
 
   int dst_len, src_len = 0;
-
+  errno_t rc = -1;
 
   src_len = strlen(src) + 1;
   //Copy data
   if(NULL == dst->data) {
-    if((dst->data = strndup(src, src_len)) == NULL)
+    if((dst->data = strdup(src)) == NULL)
       LOG("Failed to allocate memory for telemetry node data\n");
   } else { //Append data
     dst_len = strlen(dst->data) + 1;
     dst->data = (char*)realloc(dst->data, dst_len+src_len);
     if(NULL != dst->data) {
-      snprintf((dst->data)+(dst_len-1), src_len+1, ",%s", src);
+      rc = sprintf_s((dst->data)+(dst_len-1),src_len+1, ",%s", src);
+      if(rc < EOK)
+      {
+        ERR_CHK(rc);
+        free(dst->data);
+        dst->data = NULL;
+        return;
+      }
     } else {
       LOG("Failed to re-allocate memory for telemetry node data\n");
     }
@@ -166,7 +223,9 @@ static int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
   int bufflength = TR181BUF_LENGTH + NOE;
   char tr181obj_buff[bufflength];
   char *tck, *first_tck = NULL;
-
+  errno_t     rc =  -1;
+  int ind =-1;
+  int entry_flag = -1;
   //Initialize message bus handler
   ret_val = ccsp_handler_init();
   if ( 0 != ret_val ) {
@@ -176,7 +235,15 @@ static int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
 
   //Get the value of TR181 telemetry MessageBusSource RFC
   ret_val = get_tr181param_value("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Telemetry.MessageBusSource.Enable", tr181data_buff, TR181BUF_LENGTH);
-  if(0 == ret_val && 0 == strcmp(tr181data_buff, "true") ) {
+
+  if(0 == ret_val)
+  {
+    rc = strcmp_s("true",strlen("true"),tr181data_buff,&ind);
+    ERR_CHK(rc);
+    if((rc == EOK) && (ind == 0))
+       entry_flag = 1;
+  }
+  if(entry_flag == 1 ) {
     //Loop through the given list and fill the data field of each node
     for(tlist=pchead; tlist!=NULL; tlist=g_list_next(tlist)) {
       tmp = tlist->data;
@@ -200,8 +267,18 @@ static int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
             if(NULL == tck) {
               //Get NumberOfEntries of a multi-instance object
               length = first_tck - tmp->pattern;
-              snprintf(tr181obj_buff, length,  tmp->pattern);
-              strcat(tr181obj_buff, "NumberOfEntries");
+              rc = sprintf_s(tr181obj_buff,sizeof(tr181obj_buff), tmp->pattern);
+              if(rc < EOK)
+              {
+                ERR_CHK(rc);
+                return 1;
+              }
+              rc = strcat_s(tr181obj_buff,sizeof(tr181obj_buff),"NumberOfEntries");
+              if(rc != EOK)
+              {
+                ERR_CHK(rc);
+                return 1;
+              }
               ret_val = get_tr181param_value(tr181obj_buff, tr181data_buff, TR181BUF_LENGTH);
               if(0 == ret_val) {
                 obj_count = atoi(tr181data_buff);
@@ -209,10 +286,18 @@ static int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
                 if(obj_count > 0) {
                   for(i=1; i<=obj_count; i++) {
                     //Replace multi-instance token with an object instance number
-                    snprintf(tr181obj_buff, (length+1), tmp->pattern);
-                    ret_val = snprintf(tr181obj_buff+length, bufflength-length, "%d%s", i, (tmp->pattern + length + DELIMITER_SIZE));
-                    if (ret_val < 0 || ret_val >= (bufflength-length)) {
-                        LOG("Error: Buffer overflow - return value:%d", ret_val);
+                    rc = sprintf_s(tr181obj_buff,sizeof(tr181obj_buff), tmp->pattern);
+                    if(rc < EOK)
+                    {
+                      ERR_CHK(rc);
+                      return 1;
+                    }
+
+                    ret_val = sprintf_s(tr181obj_buff+length, bufflength-length,"%d%s", i, (tmp->pattern + length + DELIMITER_SIZE));
+                    if(ret_val < EOK ||(ret_val >= (bufflength-length)))
+                    {
+                      ERR_CHK(ret_val);
+                      LOG("Error: Buffer overflow - return value:%d", ret_val);
                     }
                     ret_val = get_tr181param_value(tr181obj_buff, tr181data_buff, TR181BUF_LENGTH);
                     if(0 == ret_val) {
@@ -251,6 +336,7 @@ int addToJson(GList *pchead)
 {
   GList *tlist = pchead;
   pcdata_t *tmp = NULL;
+  errno_t rc = -1;
   while (NULL != tlist) {
     tmp = tlist->data;
     if (NULL != tmp) {
@@ -259,11 +345,16 @@ int addToJson(GList *pchead)
           if (tmp->d_type == INT) {
             if (tmp->count != 0) {
               char tmp_str[5] = {0};
-              sprintf(tmp_str, "%d", tmp->count);
+              rc = sprintf_s(tmp_str,sizeof(tmp_str),"%d", tmp->count);
+              if(rc < EOK)
+              {
+                ERR_CHK(rc);
+                return -1;
+              }
               addToSearchResult(tmp->header, tmp_str);
             }
           } else if(tmp->d_type == STR) {
-            if (NULL != tmp->data && (strcmp(tmp->data, "0") != 0)) {
+            if ((NULL != tmp->data) && !((tmp->data[0] == '0') && (tmp->data[1] == '\0'))) {
               addToSearchResult(tmp->header, tmp->data);
             }
           }
@@ -287,6 +378,7 @@ int getIPVideo(char *line, pcdata_t *pcnode)
 {
   char *strFound = NULL;
   strFound = strstr(line, pcnode->pattern);
+  errno_t rc = -1;
 
   if (strFound != NULL ) {
     int tlen = 0, plen = 0, vlen = 0;
@@ -307,7 +399,12 @@ int getIPVideo(char *line, pcdata_t *pcnode)
           if (NULL == pcnode->data)
               return (-1);
 
-          strncpy (pcnode->data, strFound, MAXLINE);
+          rc = strcpy_s(pcnode->data,MAXLINE,strFound);
+          if(rc != EOK)
+          {
+            ERR_CHK(rc);
+            return -1;
+          }
           pcnode->data[tlen-plen] = '\0'; //For Boundary Safety
         }
     }
@@ -324,10 +421,12 @@ int getIPVideo(char *line, pcdata_t *pcnode)
  * @return Returns status of operation.
  * @retval Return 0 upon success.
  */
-int getErrorCode(char *str, char *ec)
+int getErrorCode(char *str, char *ec, int ec_length)
 {
   int i = 0, j = 0, len = strlen(str);
   char tmpEC[LEN] = {0};
+  errno_t rc = -1;
+
   while (str[i] != '\0') {
     if (len >=4 && str[i] == 'R' && str[i+1] == 'D' && str[i+2] =='K' && str[i+3] == '-') {
       i += 4;
@@ -343,7 +442,12 @@ int getErrorCode(char *str, char *ec)
               tmpEC[j] = str[i];
               i++; j++;
               ec[j] = '\0';
-              strcpy(ec, tmpEC);
+              rc = strcpy_s(ec,ec_length, tmpEC);
+              if(rc != EOK)
+              {
+                ERR_CHK(rc);
+                return -1;
+              }
             }
             break;
           }
@@ -368,11 +472,17 @@ int handleRDKErrCodes(GList **rdkec_head, char *line)
 {
   char err_code[20] = {0}, rdkec[20] = {0};
   pcdata_t *tnode = NULL;
+  errno_t rc = -1;
+  int ind = -1;
+  getErrorCode(line, err_code, sizeof(err_code));
 
-  getErrorCode(line, err_code);
-  if (strcmp(err_code, "") != 0) {
-    strcpy(rdkec, "RDK-");
-    strcat(rdkec, err_code);
+  if (err_code[0] != '\0') {
+    rc = sprintf_s(rdkec,sizeof(rdkec), "%s%s", "RDK-",err_code);
+    if(rc < EOK)
+    {
+       ERR_CHK(rc);
+       return -1;
+    }
     tnode = searchPCNode(*rdkec_head, rdkec);
     if (NULL != tnode) {
       tnode->count++;
@@ -440,9 +550,27 @@ int processCountPattern(char *logfile, GList *pchead, int pcIndex, GList **rdkec
  */
 int processPattern(char **prev_file, char *logfile, GList **rdkec_head, GList *pchead, int pcIndex)
 {
+  errno_t rc = -1;
+  int ind = -1;
+  int entry_flag = -1;
+
   if (NULL != logfile) {
 
-    if ((NULL == *prev_file) || (strcmp(*prev_file, logfile) != 0)) {
+    if (NULL == *prev_file)
+    {
+      entry_flag =1;
+    }
+    else
+    {
+      rc = strcmp_s(logfile, strlen(logfile), *prev_file , &ind);
+	  ERR_CHK(rc);
+	  if((ind) && (rc == EOK))
+	  {
+		entry_flag =1;
+	  }
+    }
+
+    if (1 == entry_flag) {
       if (NULL == *prev_file) {
         *prev_file = malloc(strlen(logfile) + 1);
       } else {
@@ -458,25 +586,41 @@ int processPattern(char **prev_file, char *logfile, GList **rdkec_head, GList *p
       }
 
       if (NULL != *prev_file) {
-        strcpy(*prev_file, logfile);
+         rc = strcpy_s(*prev_file, strlen(logfile) + 1,logfile);
+         if(rc != EOK)
+         {
+           ERR_CHK(rc);
+           free(*prev_file);
+           *prev_file = NULL;
+           return -1;
+         }
+
       }
     }
 
     // Process
     if (NULL != pchead) {
-      if (0 == strcmp(logfile, "top_log.txt")) {
-        processTopPattern(logfile, pchead, pcIndex);
-      }
+       enum logType_e 			type;
+
+     if(get_log_type_from_name(logfile, &type))
+     {
+       if (type  == TOPLOG)
+       {
+          processTopPattern(logfile, pchead, pcIndex);
+       }
 #ifdef USE_TR181_CCSP_MESSAGEBUS
-      else if(0 == strcmp(logfile, "<message_bus>")) {
-         processTr181Objects(logfile, pchead, pcIndex);
-         addToJson(pchead);
-      }
+       else if (type == MESSAGE_BUS )
+       {
+          processTr181Objects(logfile, pchead, pcIndex);
+          addToJson(pchead);
+       }
 #endif
-      else {
-        processCountPattern(logfile, pchead, pcIndex, rdkec_head);
-        addToJson(pchead);
-      }
+     }
+	 else {
+          processCountPattern(logfile, pchead, pcIndex, rdkec_head);
+          addToJson(pchead);
+     }
+
     }
 
     // clear nodes memory after process
@@ -531,21 +675,34 @@ char *strSplit(char *str, char *delim) {
  */
 void getDType(char *filename, char *header, DType_t *dtype)
 {
-  if (NULL != header) {
-    if (NULL != strstr(header, "split")) {
-      *dtype = STR;
-    } else if (0 == strcmp(filename, "top_log.txt")) {
-      *dtype = STR;
+errno_t rc = -1;
+int ind = -1;
+enum logType_e             type;
+
+if (NULL != header) {
+ 
+ if (NULL != strstr(header, "split")) {
+       *dtype = STR;
     }
+    else if(get_log_type_from_name(filename, &type))
+ 	{
+      if(type  == TOPLOG)
+      {
+        *dtype = STR;
+      }
 #ifdef USE_TR181_CCSP_MESSAGEBUS
-    else if(0 == strcmp(filename, "<message_bus>")) {
-      *dtype = STR;
+      else if (type == MESSAGE_BUS )
+      {
+        *dtype = STR;
+      }
+#endif
     }
-#endif 
     else {
-      *dtype = INT;
+       *dtype = INT;
     }
-  }
+
+ }
+
 }
 
 /**
@@ -565,6 +722,9 @@ int parseFile(char *fname)
   char *filename = NULL, *prevfile = NULL;
   int pcIndex = 0;
   GList *pchead = NULL, *rdkec_head = NULL;
+  errno_t rc  = -1;
+  int   ind = -1;
+  int snmp_len = strlen("snmp");
 
   if (NULL == (sfp = fopen(fname, "r"))) {
     return (-1);
@@ -583,16 +743,18 @@ int parseFile(char *fname)
     char *temp_skip_interval = strSplit(NULL, DELIMITER);
     int tmp_skip_interval, is_skip_param;
     DType_t dtype;
+	int file_len = 0;
 
     if (NULL == temp_file || NULL == temp_pattern || NULL == temp_header || NULL == temp_skip_interval)
       continue;
 
     //LOG(">l:%s,f:%s,p:%s<", line, temp_file, temp_pattern);
-    if ((0 == strcmp(temp_pattern, "")) || (0 == strcmp(temp_file, "")))
+    if ((temp_pattern[0] == '\0' ) || (temp_file[0] == '\0') )
       continue;
-
-    if (0 == strcasecmp(temp_file, "snmp"))
-      continue;
+    rc = strcasecmp_s( "snmp",snmp_len,temp_file,&ind);
+    ERR_CHK(rc);
+    if((0 == ind) && (rc == EOK))
+       continue;
 
     getDType(temp_file, temp_header, &dtype);
     tmp_skip_interval = atoi(temp_skip_interval);
@@ -602,6 +764,7 @@ int parseFile(char *fname)
 
     is_skip_param = isSkipParam(tmp_skip_interval);
 
+
     if (NULL == filename) {
       filename = malloc(strlen(temp_file) + 1);
       pchead = NULL;
@@ -609,7 +772,10 @@ int parseFile(char *fname)
         pcIndex = 1;
       }
     } else {
-      if ((0 == strcmp(filename, temp_file)) && pcIndex <= MAX_PROCESS ) {
+      rc = strcmp_s(filename, strlen(filename), temp_file , &ind);
+      ERR_CHK(rc);
+
+      if ((!ind) && (rc == EOK) && pcIndex <= MAX_PROCESS ) {
         if (is_skip_param == 0 && (0 == insertPCNode(&pchead, temp_pattern, temp_header, dtype, 0, NULL))) {
           pcIndex++;
         }
@@ -630,7 +796,16 @@ int parseFile(char *fname)
       }
     }
     if (NULL != filename) {
-      strcpy(filename, temp_file);
+        rc = strcpy_s(filename,strlen(temp_file) + 1,temp_file);
+        if(rc != EOK)
+        {
+          ERR_CHK(rc);
+          free(filename);
+          if(prevfile)
+            free(prevfile);
+          fclose(sfp);
+          return -1;
+        }
     }
     usleep(USLEEP_SEC);
   }

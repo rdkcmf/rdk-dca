@@ -36,6 +36,7 @@
 
 //cpu and free memory
 #include <stdio.h>
+#include "safec_lib.h"
 
 #define MAXLEN 512
 
@@ -75,6 +76,7 @@ int getCpuUsage(char * cpuUtil)
 	FILE *fp;
 	char cpuUtilization[MAXLEN]={'\0'};
 	int i=0;
+	errno_t rc = -1;
 
 	for(i=0; i<5; i++)
 	{
@@ -109,12 +111,22 @@ int getCpuUsage(char * cpuUtil)
 
 		usr_cpu=((b[0]-a[0])/total_time)*100;
 
-		sprintf(cpuUtilization,"%Lf",usr_cpu);
+		rc = sprintf_s(cpuUtilization,sizeof(cpuUtilization),"%Lf",usr_cpu);
+		if(rc < EOK)
+		{
+		  ERR_CHK(rc);
+		  return 0;
+		}
 	}
 
 	if(cpuUtil)
 	{
-		strcpy(cpuUtil,cpuUtilization);
+        rc = strcpy_s(cpuUtil,MAXLEN,cpuUtilization);
+        if(rc != EOK)
+        {
+          ERR_CHK(rc);
+          return 0;
+        }
 		return 1;
 	}
 	else

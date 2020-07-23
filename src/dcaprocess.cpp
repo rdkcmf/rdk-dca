@@ -48,6 +48,8 @@
 #include <string>
 #include <cstring>
 #include <cstdlib>
+#include "safec_lib.h"
+
 
 #define LEN 14
 #define BUF_LEN 16
@@ -76,9 +78,8 @@ int main(int argc,char *argv[]) {
     FILE *in = NULL;
     char *processName = NULL;
     FILE *fp = NULL ;
-    procMemCpuInfo pInfo;
-
-    memset(&pInfo, '\0', sizeof(procMemCpuInfo));
+    procMemCpuInfo pInfo = { 0 };
+    errno_t  rc =  -1;
     
     if(argv[1] == NULL)
     {
@@ -88,7 +89,12 @@ int main(int argc,char *argv[]) {
     processName = argv[1];
  
     if (processName != NULL) {  
-        memcpy(pInfo.processName, processName, strlen(processName)+1); 
+        rc = memcpy_s(pInfo.processName, sizeof(pInfo.processName), processName, strlen(processName)+1);
+        if(rc != EOK)
+        {
+          ERR_CHK(rc);
+          return 0;
+        }
     }
 
 
@@ -128,6 +134,7 @@ char* getResidentMemory(procMemCpuInfo *pInfo, int* processPid)
    static char retMem[MEM_STRING_SIZE];
    int intStr = 0,intValue = 0;
    long pageSizeInKb = sysconf(_SC_PAGE_SIZE) / 1024; /* x86-64 is configured to use 2MB pages */
+   errno_t rc = -1;
 
    /* Use /proc/<pid>/statm (see man page for proc)
     * statm is made up of size, resident, shared, text, lib, data
@@ -135,7 +142,12 @@ char* getResidentMemory(procMemCpuInfo *pInfo, int* processPid)
     * We only require resident memory, so read the 1st 2 columns.
     */
    /* Set procPath */
-   sprintf (procPath, "/proc/%d/statm", *processPid);
+   rc = sprintf_s(procPath,sizeof(procPath),"/proc/%d/statm", *processPid);
+   if(rc < EOK)
+   {
+     ERR_CHK(rc);
+     return NULL;
+   }
 
    ifstream statm(procPath);
    int totalMemory, residentMemory;
@@ -147,11 +159,13 @@ char* getResidentMemory(procMemCpuInfo *pInfo, int* processPid)
    intValue = intStr;
    if (intValue >= 1024)
       intStr = intStr/1024;
-   snprintf(retMem, sizeof(retMem), "%d", intStr);
-   if (intValue >= 1024)
-      strcat(retMem,"m");
-   else
-      strcat(retMem,"k");
+   rc = sprintf_s(retMem,sizeof(retMem),"%d%s", intStr,(intValue >= 1024) ? "m" : "k");
+   if(rc < EOK)
+   {
+     ERR_CHK(rc);
+     return NULL;
+   }
+
    return retMem;
 }
 
@@ -172,13 +186,19 @@ bool getProcInfo(procMemCpuInfo *pInfo)
     char var9[512]= {'\0'}; 
     char var10[512]= {'\0'};          
     int pid = 0;
+    errno_t rc = -1;
 
     if (pInfo == NULL) {
 
         return false;    
     }
 
-    sprintf(command, "pidof %s", pInfo->processName);
+    rc = sprintf_s(command,sizeof(command),"pidof %s", pInfo->processName);
+    if(rc < EOK)
+    {
+      ERR_CHK(rc);
+      return false;
+    }
     if(!(inFp = popen(command, "r"))){
         return false;
     }
@@ -191,19 +211,23 @@ bool getProcInfo(procMemCpuInfo *pInfo)
 #ifdef INTEL
     #ifdef YOCTO_BUILD
         /* Format Use:  `top -b -n 1 | grep Receiver` */
-        sprintf(command, "top -b -n 1 | sed  's/^[ \t]*//' | grep \"^%d\"", pid);
+        rc = sprintf_s(command,sizeof(command),"top -b -n 1 | sed  's/^[ \t]*//' | grep \"^%d\"", pid);
+
     #else
         /* Format Use:  `top -n 1 | grep Receiver` */
-        sprintf(command, "top -n 1 | grep -i '%s'", pInfo->processName);
+        rc = sprintf_s(command,sizeof(command),"top -n 1 | grep -i '%s'", pInfo->processName);
     #endif
 
 #else 
      /* ps -C Receiver -o %cpu -o %mem */
     //sprintf(command, "ps -C '%s' -o %%cpu -o %%mem | sed 1d", pInfo->processName);
-    sprintf(command, "top -b -n 1 | grep -i '%s'", pInfo->processName);
-
+    rc = sprintf_s(command,sizeof(command),"top -b -n 1 | grep -i '%s'", pInfo->processName);
 #endif
-
+    if(rc < EOK)
+    {
+      ERR_CHK(rc);
+      return false;
+    }
    
     if(!(inFp = popen(command, "r"))){
         return false;
@@ -226,16 +250,26 @@ bool getProcInfo(procMemCpuInfo *pInfo)
         pcpu = var9;
 	}
 #endif
+    pclose(inFp);
     /* Get the resident memory value. Take from proc/$pid/stats */
     pmem = getResidentMemory(pInfo, &pid);
 
     if ((pcpu != NULL) && (pmem != NULL)) {
-        strncpy(pInfo->cpuUse, pcpu, strlen(pcpu)+1);
-        strncpy(pInfo->memUse, pmem, strlen(pmem)+1);
+        rc = strcpy_s(pInfo->cpuUse,sizeof(pInfo->cpuUse),pcpu);
+        if(rc != EOK)
+        {
+          ERR_CHK(rc);
+          return false;
+        }
+        rc = strcpy_s(pInfo->memUse,sizeof(pInfo->memUse),pmem);
+        if(rc != EOK)
+        {
+          ERR_CHK(rc);
+          return false;
+        }
         ret = true;
     }
     
-    pclose(inFp);
     return ret;
 
 }
@@ -267,6 +301,7 @@ bool getProcInfo(int pid, procinfo * pinfo)
 	char exName [CMD_LEN], state;
 	unsigned euid, egid;
 	unsigned int flags, minflt, cminflt, majflt, cmajflt, timeout, itrealvalue, vsize, rlim, startcode, endcode, startstack, kstkesp, kstkeip, wchan, rss; 
+    errno_t rc = -1;
 
 	if (NULL == pinfo)
 	{
@@ -274,7 +309,12 @@ bool getProcInfo(int pid, procinfo * pinfo)
 		return false;
 	}
 
-	sprintf (szFileName, "/proc/%u/stat", (unsigned) pid);
+    rc = sprintf_s(szFileName,sizeof(szFileName),"/proc/%u/stat", (unsigned) pid);
+    if(rc < EOK)
+    {
+      ERR_CHK(rc);
+      return false;
+    }
 
 	if (-1 == access (szFileName, R_OK))
 	{
@@ -306,7 +346,13 @@ bool getProcInfo(int pid, procinfo * pinfo)
 	/** pid **/
 	s = strchr (szStatStr, '(') + 1;
 	t = strchr (szStatStr, ')');
-	strncpy (exName, s, t - s);
+    rc = strncpy_s(exName,sizeof(exName),s,t - s);
+    if(rc != EOK)
+    {
+      ERR_CHK(rc);
+      fclose (fp);
+      return false;
+    }
 	exName [t - s] = '\0';
 
 	/* Refer to /proc/[pid]/stat from proc man-page.*/
@@ -422,15 +468,14 @@ bool getProcessCpuUtilization(int pid, float *procCpuUtil)
 
 int main(int argc,char *argv[]) {
     char *processName = NULL;
-    procinfo pInfo;
+    procinfo pInfo = { 0 };
     char command[CMD_LEN] = {'\0'};
     int pid = 0;
     float cpu = 0.0;
     FILE *inFp = NULL;
     int pagesize_kb = 0;
+    errno_t rc = -1;
 
-    memset(&pInfo, 0, sizeof(procinfo));
-    
     if(argv[1] == NULL)
     {
        cout<<"No Arguments passed!"<<endl;
@@ -438,7 +483,13 @@ int main(int argc,char *argv[]) {
     }
 	
     processName = argv[1];
-    sprintf(command, "pidof %s", processName);
+    rc = sprintf_s(command,sizeof(command),"pidof %s", processName);
+    if(rc < EOK)
+    {
+      ERR_CHK(rc);
+      return false;
+    }
+
 
     if(!(inFp = popen(command, "r"))){
         return false;

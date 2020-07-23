@@ -27,6 +27,8 @@
 
 #include "dcatr181.h"
 #include "dcautils.h"
+#include "safec_lib.h"
+
 
 /* Enable debug prints */
 //#define TR181_DEBUG
@@ -106,6 +108,7 @@ int get_tr181param_value( const char* path_namespace, char* parm_value, int len)
     char* parameter_name[1] = {NULL};
     parameterValStruct_t** param_val = NULL;
     componentStruct_t** components = NULL;
+    errno_t rc = -1;
 
     if( NULL == ccsp_bus_handle  || NULL == path_namespace || NULL == parm_value)
     {
@@ -134,7 +137,14 @@ int get_tr181param_value( const char* path_namespace, char* parm_value, int len)
         return 1;
     }
 
-    snprintf(parm_value, (len - 1), "%s",  param_val[0]->parameterValue);
+    rc = sprintf_s(parm_value,len,"%s",  param_val[0]->parameterValue);
+    if(rc < EOK)
+    {
+      ERR_CHK(rc);
+      free_componentStruct_t(ccsp_bus_handle, comp_size, components);
+      free_parameterValStruct_t(ccsp_bus_handle, val_size, param_val);
+      return 1;
+    }
     free_componentStruct_t(ccsp_bus_handle, comp_size, components);
     free_parameterValStruct_t(ccsp_bus_handle, val_size, param_val);
     

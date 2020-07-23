@@ -41,9 +41,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>           /* Definition of AT_* constants */
 #include <unistd.h>
+#include "safec_lib.h"
+
+
 
 #define LEN 14
-#define BUF_LEN 16
+#define BUF_LEN 20     // increase the BUF_LEN, because getting the source length is high  
 #define CMD_LEN 256
 #define MAXLEN 512
 #define PID_SIZE 10
@@ -102,7 +105,7 @@ int getCPUInfo(procMemCpuInfo *pInfo);
  */
 int getProcUsage(char *processName) {
   if (processName != NULL) {
-    procMemCpuInfo pInfo;
+    procMemCpuInfo pInfo = { 0 };
     char pidofCommand[PIDOF_SIZE];
     FILE *cmdPid;
     char *mem_key = NULL, *cpu_key = NULL;
@@ -110,11 +113,19 @@ int getProcUsage(char *processName) {
     int index = 0;
     pid_t *pid = NULL;
     pid_t *temp = NULL;
+    errno_t rc = -1;
+    int cpu_key_length = 0, mem_key_length = 0;
 
-    memset(&pInfo, '\0', sizeof(procMemCpuInfo));
-    memcpy(pInfo.processName, processName, strlen(processName)+1); 
+    /*
+    * LIMITATION
+    * Following memcpy() and sprintf() api's can't modified to safec api's
+    * Because, safec has the limitation of copying only 4k ( RSIZE_MAX ) to destination
+    * And here, we have source size more than 4k.
+    */
+    memcpy(pInfo.processName, processName, strlen(processName)+1);
 
     sprintf(pidofCommand, "pidof %s", processName);
+
 #ifdef LIBSYSWRAPPER_BUILD
     if (!(cmdPid = v_secure_popen("r", "pidof %s", processName)))
 #else
@@ -125,7 +136,7 @@ int getProcUsage(char *processName) {
       return 0;
     }
 
-    pid = (int *) malloc (sizeof(pid_t));
+    pid = (pid_t *) malloc (sizeof(pid_t));
     if ( NULL == pid )
     {
 #ifdef LIBSYSWRAPPER_BUILD
@@ -146,7 +157,6 @@ int getProcUsage(char *processName) {
         temp = (pid_t *) realloc (pid,((index+1)*sizeof(pid_t)) );
         if ( NULL == temp )
         {
-           if(pid)
                 free(pid);
 #ifdef LIBSYSWRAPPER_BUILD
                 v_secure_pclose(cmdPid);
@@ -156,58 +166,56 @@ int getProcUsage(char *processName) {
            return 0;
         }
         pid=temp;
-        temp=NULL;
     }
+
+    #ifdef LIBSYSWRAPPER_BUILD
+		v_secure_pclose(cmdPid);
+    #else
+		pclose(cmdPid);
+    #endif
+
+
     // If pidof command output is empty
     if ((*pid) <= 0)
     {
         free(pid);
-#ifdef LIBSYSWRAPPER_BUILD
-        v_secure_pclose(cmdPid);
-#else
-        pclose(cmdPid);
-#endif
         return 0;
     }
 
     pInfo.total_instance=index;
     pInfo.pid=pid;
-#ifdef LIBSYSWRAPPER_BUILD
-    v_secure_pclose(cmdPid);
-#else
-    pclose(cmdPid);
-#endif
 
-    if(0 != getProcInfo(&pInfo))
+    if (getProcInfo(&pInfo) == 0) {
+         return 0;
+    }
+
+    mem_key_length = strlen(processName) + strlen(MEM_KEY_PREFIX) + 1;
+    cpu_key_length = strlen(processName) + strlen(CPU_KEY_PREFIX) + 1;
+    mem_key = malloc(mem_key_length);
+    cpu_key = malloc(cpu_key_length);
+    if (NULL != mem_key && NULL != cpu_key)
     {
-      mem_key = malloc(strlen(processName) + strlen(MEM_KEY_PREFIX) + 1);
-      cpu_key = malloc(strlen(processName) + strlen(CPU_KEY_PREFIX) + 1);
-      if (NULL != mem_key && NULL != cpu_key)
-      {
-        strcpy(cpu_key, CPU_KEY_PREFIX);
-        strcat(cpu_key, processName);
+       /*
+       * LIMITATION
+       * Following snprintf() api's can't modified to safec api's
+       * Because, safec has the limitation of copying only 4k ( RSIZE_MAX ) to destination
+       * Here, we have source size more than 4k.
+       */
+        snprintf(cpu_key,cpu_key_length,"%s%s", CPU_KEY_PREFIX,processName);
 
-        strcpy(mem_key, MEM_KEY_PREFIX);
-        strcat(mem_key, processName);
+        snprintf(mem_key,mem_key_length,"%s%s", MEM_KEY_PREFIX,processName);
 
         addToSearchResult(mem_key, pInfo.memUse);
         addToSearchResult(cpu_key, pInfo.cpuUse);
         ret = 1;
-      }
- 
-      if (mem_key)
-        free(mem_key);
-
-      if (cpu_key)
-        free(cpu_key);
-
-      if (pid)
-        free(pid);
-
-      return ret;
     }
-    if (pid)
-      free(pid);
+ 
+    free(mem_key);
+    free(cpu_key);
+    free(pid);
+
+    return ret;
+
   } 
   return 0;
 }
@@ -231,6 +239,7 @@ int getProcPidStat(int pid, procinfo * pinfo)
   char exName [CMD_LEN], state;
   unsigned euid, egid;
   unsigned int flags, minflt, cminflt, majflt, cmajflt, timeout, itrealvalue, vsize, rlim, startcode, endcode, startstack, kstkesp, kstkeip, wchan; 
+  errno_t rc = -1;
 
   if (NULL == pinfo)
   {
@@ -238,7 +247,13 @@ int getProcPidStat(int pid, procinfo * pinfo)
     return 0;
   }
 
-  sprintf (szFileName, "/proc/%u/stat", (unsigned) pid);
+  rc = sprintf_s(szFileName,sizeof(szFileName),"/proc/%u/stat", (unsigned) pid);
+  if(rc < EOK)
+  {
+    ERR_CHK(rc);
+    return 0;
+  }
+
   if ((fd = open(szFileName, O_RDONLY)) == -1)
   {
     LOG("Unable to access file in get proc info");
@@ -262,7 +277,14 @@ int getProcPidStat(int pid, procinfo * pinfo)
   /** pid **/
   s = strchr (szStatStr, '(') + 1;
   t = strchr (szStatStr, ')');
-  strncpy (exName, s, t - s);
+
+  rc = strncpy_s(exName,sizeof(exName),s,t - s);
+  if(rc != EOK)
+  {
+    ERR_CHK(rc);
+    close(fd);
+    return 0;
+  }
   exName [t - s] = '\0';
   if(s !=  NULL && t != NULL && (t-s) > 0){
       sscanf (t + 2, "%c %d %d %d %d %d %u %u %u %u %u %d %d %d %d %d %d %u %u %d %u %u %u %u %u %u %u %u %d %d %d %d %u",
@@ -343,10 +365,13 @@ int getMemInfo(procMemCpuInfo *pmInfo)
   long pageSizeInKb = sysconf(_SC_PAGE_SIZE) / 1024; /* x86-64 is configured to use 2MB pages */
   unsigned int total_memory=0;
   int index = 0;
-
+  errno_t rc = -1;
+  int proc_struct_size = sizeof(procinfo);
   for(index=0;index<(pmInfo->total_instance);index++)
   {
-    memset(&pinfo, 0, sizeof(procinfo));
+    rc = memset_s(&pinfo,proc_struct_size,0,proc_struct_size);
+    ERR_CHK(rc);
+
     if( 0 == getProcPidStat(pmInfo->pid[index], &pinfo))
       return 0;
     total_memory+=pinfo.rss;
@@ -357,13 +382,19 @@ int getMemInfo(procMemCpuInfo *pmInfo)
   intValue = intStr;
   if (intValue >= 1024)
     intStr = intStr/1024;
-  snprintf(retMem, sizeof(retMem), "%d", intStr);
-  if (intValue >= 1024)
-    strcat(retMem,"m");
-  else
-    strcat(retMem,"k");
+  rc = sprintf_s(retMem,sizeof(retMem),"%d%s", intStr,(intValue >= 1024) ? "m" : "k");
+  if(rc < EOK)
+  {
+	ERR_CHK(rc);
+	return 0;
+  }
 
-  strncpy(pmInfo->memUse, retMem, strlen(retMem)+1);
+  rc = strncpy_s(pmInfo->memUse,sizeof(pmInfo->memUse),retMem,strlen(retMem)+1);
+  if(rc != EOK)
+  {
+    ERR_CHK(rc);
+    return 0;
+  }
   return 1;
 }
 
@@ -394,6 +425,7 @@ int getCPUInfo(procMemCpuInfo *pInfo)
   int total_cpu_usage=0;
   char top_op[2048]= {'\0'};
   int cmd_option = 0;
+  errno_t rc = -1;
 
   if (pInfo == NULL) {
 
@@ -408,17 +440,37 @@ int getCPUInfo(procMemCpuInfo *pInfo)
 #ifdef INTEL
   /* Format Use:  `top n 1 | grep Receiver` */
   if ( 1 == cmd_option ) {
-    sprintf(command, "top -n 1 -c | grep -v grep |grep -i '%s'", pInfo->processName);
+    rc = sprintf_s(command,sizeof(command),"top -n 1 -c | grep -v grep |grep -i '%s'", pInfo->processName);
+    if(rc < EOK)
+    {
+      ERR_CHK(rc);
+      return 0;
+    }
   } else {
-    sprintf(command, "top -n 1 | grep -i '%s'", pInfo->processName);
+    rc = sprintf_s(command,sizeof(command),"top -n 1 | grep -i '%s'", pInfo->processName);
+    if(rc < EOK)
+    {
+      ERR_CHK(rc);
+      return 0;
+    }
   }
 #else 
   /* ps -C Receiver -o %cpu -o %mem */
   //sprintf(command, "ps -C '%s' -o %%cpu -o %%mem | sed 1d", pInfo->processName);
   if ( 1 == cmd_option ) {
-    sprintf(command, "top -b -n 1 -c | grep -v grep | grep -i '%s'", pInfo->processName);
+    rc = sprintf_s(command,sizeof(command),"top -b -n 1 -c | grep -v grep | grep -i '%s'", pInfo->processName);
+    if(rc < EOK)
+    {
+      ERR_CHK(rc);
+      return 0;
+    }
   } else {
-    sprintf(command, "top -b -n 1 | grep -i '%s'", pInfo->processName);
+    rc = sprintf_s(command,sizeof(command),"top -b -n 1 | grep -i '%s'", pInfo->processName);
+    if(rc < EOK)
+    {
+      ERR_CHK(rc);
+      return 0;
+    }
   }
 
 
@@ -448,7 +500,13 @@ int getCPUInfo(procMemCpuInfo *pInfo)
   }
 #endif
 
-  snprintf(pInfo->cpuUse, sizeof(pInfo->cpuUse), "%d", total_cpu_usage);
+  rc = sprintf_s(pInfo->cpuUse,sizeof(pInfo->cpuUse),"%d", total_cpu_usage);
+  if(rc < EOK)
+  {
+    ERR_CHK(rc);
+    pclose(inFp);
+    return 0;
+  }
   pclose(inFp);
   return ret;
 
@@ -551,6 +609,7 @@ int getCPUInfo(procMemCpuInfo *pmInfo) {
   float cpu = 0;
   float total_cpu = 0;
   int index = 0;
+  errno_t rc = -1;
 
   for(index=0;index<(pmInfo->total_instance);index++)
   {
@@ -561,7 +620,12 @@ int getCPUInfo(procMemCpuInfo *pmInfo) {
     total_cpu+=cpu;
   }
 
-  snprintf(pmInfo->cpuUse, sizeof(pmInfo->cpuUse), "%.1f", (float)total_cpu);
+  rc = sprintf_s(pmInfo->cpuUse,sizeof(pmInfo->cpuUse),"%.1f", (float)total_cpu);
+  if(rc < EOK)
+  {
+    ERR_CHK(rc);
+    return 0;
+  }
   return 1;
 }
 
