@@ -36,6 +36,9 @@
 
 
 #include "dcautils.h"
+#include "safec_lib.h"
+
+
 
 #define EC_BUF_LEN 20
 
@@ -189,43 +192,54 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
   static FILE *LOG_FP = NULL;
   static int is_rotated_log = 0;
   char *rval = NULL;
+  errno_t rc = -1;
+  char *curLog = NULL;
+  char * rotatedLog = NULL;
+  size_t curLog_len = 0;
+  size_t rotatedLog_len = 0;
+  char *fileExtn = ".1";
 
   if ((NULL == PERSISTENT_PATH) || (NULL == LOG_PATH) || (NULL == name)) {
     LOG("Path variables are empty");
     return NULL;
   }
 
+  curLog_len = strlen(LOG_PATH) + strlen(name) + 1;
+  rotatedLog_len = strlen(LOG_PATH) + strlen(name) + strlen(fileExtn) + 1;
+  curLog = malloc(curLog_len);
+  rotatedLog = malloc(rotatedLog_len);
+  if((curLog == NULL) || (rotatedLog == NULL))
+     return NULL;
+
   if (NULL == LOG_FP)
   {
-    char *curLog = NULL;
     long seek_value = 0;
-
-    curLog = malloc(strlen(LOG_PATH) + strlen(name) + 1);
     if (NULL != curLog)
     {
-      strcpy(curLog, LOG_PATH);
-      strcat(curLog, name);
+      rc = sprintf_s(curLog,curLog_len, "%s%s", LOG_PATH,name);
+      if(rc < EOK)
+      {
+        ERR_CHK(rc);
+        goto EXIT;
+      }
+
       if (0 != readLogSeek(name, &seek_value))
       {
         LOG_FP = fopen(curLog, "rb");
-        free(curLog);
-        curLog = NULL;
 
         if (NULL == LOG_FP)
-          return NULL;
+          goto EXIT;
       }
       else
       {
         long fileSize = 0;
 
         LOG_FP = fopen(curLog, "rb");
-        free(curLog);
-        curLog = NULL;
 
         if (NULL == LOG_FP)
         {
           LAST_SEEK_VALUE = 0;
-          return NULL;
+          goto EXIT;
         }
 
         fileSize = fsize(LOG_FP);
@@ -238,7 +252,20 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
         }
         else
         {
-          if ((NULL != DEVICE_TYPE) && (0 == strcmp("broadband", DEVICE_TYPE)))
+          int entry_flag = -1;
+          int ind = -1;
+
+          if(NULL != DEVICE_TYPE)
+          {
+            rc = strcmp_s("broadband", strlen("broadband"), DEVICE_TYPE , &ind);
+            ERR_CHK(rc);
+            if((!ind) && (rc == EOK))
+            {
+             entry_flag = 1;
+            }
+          }
+
+          if (1 == entry_flag)
           {
             LOG("Telemetry file pointer corrupted");
             if(fseek(LOG_FP, 0, 0) != 0){
@@ -247,12 +274,15 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
           }
           else
           {
-            char *fileExtn = ".1";
-            char * rotatedLog = malloc(strlen(LOG_PATH) + strlen(name) + strlen(fileExtn) + 1);
             if (NULL != rotatedLog) {
-              strcpy(rotatedLog, LOG_PATH);
-              strcat(rotatedLog, name);
-              strcat(rotatedLog, fileExtn);
+              rc = sprintf_s(rotatedLog,rotatedLog_len, "%s%s%s", LOG_PATH,name,fileExtn);
+              if(rc < EOK)
+              {
+                ERR_CHK(rc);
+                fclose(LOG_FP);
+                LOG_FP = NULL;
+                goto EXIT;
+              }
 
               fclose(LOG_FP);
               LOG_FP = NULL;
@@ -263,23 +293,21 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
               {
                 LOG("Error in opening file %s", rotatedLog);
                 LAST_SEEK_VALUE = 0;
-                free(rotatedLog);
-                rotatedLog = NULL;
-                return NULL;
+                goto EXIT;
               }
 
-              free(rotatedLog);
-              rotatedLog = NULL;
 
               if(fseek(LOG_FP, seek_value, 0) != 0){
                   LOG("Cannot set the file position indicator for the stream pointed to by stream\n");
               }
               is_rotated_log = 1;
             }
+
           }
         }
       }
     }
+
   }
 
   if (NULL != LOG_FP)
@@ -295,26 +323,25 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
 
       if (is_rotated_log == 1)
       {
-        char *curLog = NULL;
         is_rotated_log = 0;
-        curLog = malloc(strlen(LOG_PATH) + strlen(name) + 1);
         if (NULL != curLog)
         {
-          strcpy(curLog, LOG_PATH);
-          strcat(curLog, name);
+          rc = sprintf_s(curLog,curLog_len, "%s%s", LOG_PATH,name);
+          if(rc < EOK)
+          {
+             ERR_CHK(rc);
+             goto EXIT;
+          }
+
           LOG_FP = fopen(curLog, "rb");
 
           if (NULL == LOG_FP)
           {
             LOG("Error in opening file %s", curLog);
             LAST_SEEK_VALUE = 0;
-            free(curLog);
-            curLog = NULL;
-            return NULL;
+            goto EXIT;
           }
 
-          free(curLog);
-          curLog = NULL;
         }
         rval = fgets(buf, buflen, LOG_FP);
 	if (NULL == rval)
@@ -325,11 +352,19 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
           fclose(LOG_FP);
           LOG_FP = NULL;
 	}
+
       }
     }
   }
 
+  free(curLog);
+  free(rotatedLog);
   return rval;
+
+EXIT:
+ free(curLog);
+ free(rotatedLog);
+ return NULL;
 }
 
 /**
@@ -340,50 +375,86 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
  */
 void updateIncludeConfVal(char *logpath, char *perspath)
 {
+  errno_t rc = -1;
+  int ind = -1;
+  int p_path_len = -1, log_path_len = -1;
   FILE *file = fopen( INCLUDE_PROPERTIES, "r");
   if(NULL != file )
   {
     char props[255] = {""};
+    p_path_len = strlen("PERSISTENT_PATH=");
+    log_path_len = strlen("LOG_PATH=");
     while(fscanf(file,"%255s", props) != EOF )
     {
       char *property = NULL;
       if (property = strstr( props, "PERSISTENT_PATH=")) {
-        property = property + strlen("PERSISTENT_PATH=");
+        property = property + p_path_len;
         PERSISTENT_PATH = malloc(strlen(property) + 1);
         if (NULL != PERSISTENT_PATH) {
-          strcpy(PERSISTENT_PATH, property);
+          rc = strcpy_s(PERSISTENT_PATH,strlen(property) + 1, property);
+          if(rc != EOK)
+          {
+            ERR_CHK(rc);
+            free(PERSISTENT_PATH);
+            PERSISTENT_PATH = NULL;
+            fclose(file);
+            return;
+          }
         }
       } else if (property = strstr( props, "LOG_PATH=")) {
-        if ( 0 == strncmp(props, "LOG_PATH=", strlen("LOG_PATH=")) ) {
-          property = property + strlen("LOG_PATH=");
+        if ( 0 == strncmp(props, "LOG_PATH=", log_path_len) ) {
+          property = property + log_path_len;
           LOG_PATH = malloc(strlen(property) + 1);
           if (NULL != LOG_PATH) {
-            strcpy(LOG_PATH, property);
+            rc = strcpy_s(LOG_PATH,strlen(property) + 1, property);
+            if(rc != EOK)
+             {
+               ERR_CHK(rc);
+               free(LOG_PATH);
+               LOG_PATH = NULL;
+               fclose(file);
+               return;
+             }
+
           }
         }
       }
     }
     fclose(file);
   }
-  if (NULL != logpath && strcmp(logpath, "") != 0)
+  if ((NULL != logpath) && (logpath[0] != '\0'))
   {
     char *tmp = NULL;
     tmp = realloc(LOG_PATH, strlen(logpath) + 1 );
     if (NULL != tmp) {
       LOG_PATH = tmp;
-      strcpy(LOG_PATH, logpath);
+      rc = strcpy_s(LOG_PATH,strlen(logpath) + 1, logpath);
+      if(rc != EOK)
+      {
+        ERR_CHK(rc);
+        free(LOG_PATH);
+        LOG_PATH = NULL;
+        return;
+      }
     } else {
       free(LOG_PATH);
       LOG_PATH = NULL;
     }
   }
-  if (NULL != perspath && strcmp(perspath, "") != 0)
+  if ((NULL != perspath) && (perspath[0] != '\0'))
   {
     char *tmp = NULL;
-    tmp = realloc(PERSISTENT_PATH, strlen(perspath) + 1 );
+    tmp = realloc(PERSISTENT_PATH,strlen(perspath) + 1 );
     if (NULL != tmp) {
       PERSISTENT_PATH = tmp;
-      strcpy(PERSISTENT_PATH, perspath);
+      rc = strcpy_s(PERSISTENT_PATH,strlen(perspath) + 1, perspath);
+      if(rc != EOK)
+      {
+        ERR_CHK(rc);
+        free(PERSISTENT_PATH);
+        PERSISTENT_PATH = NULL;
+        return;
+      }
     } else {
       free(PERSISTENT_PATH);
       PERSISTENT_PATH = NULL;
@@ -400,6 +471,10 @@ void updateIncludeConfVal(char *logpath, char *perspath)
 void updateConfVal(char *logpath, char *perspath)
 {
   FILE *file = NULL;
+  errno_t rc = -1;
+  int ind = -1;
+  int device_type_len = strlen("DEVICE_TYPE=");
+  int length = 0 ;
 
   file = fopen( DEVICE_PROPERTIES, "r");
   if(NULL != file )
@@ -408,44 +483,71 @@ void updateConfVal(char *logpath, char *perspath)
     while(fscanf(file,"%255s", props) != EOF )
     {
       char *property = NULL;
+      length = 0;
       if(property = strstr( props, "DEVICE_TYPE="))
       {
-        property = property + strlen("DEVICE_TYPE=");
-        DEVICE_TYPE = malloc(strlen(property) + 1);
+        property = property + device_type_len;
+        length = strlen(property) + 1;
+        DEVICE_TYPE = malloc(length);
         if (NULL != DEVICE_TYPE) {
-          strcpy(DEVICE_TYPE, property);
+          rc = strcpy_s(DEVICE_TYPE,length, property);
+          if(rc != EOK)
+          {
+            ERR_CHK(rc);
+            free(DEVICE_TYPE);
+            DEVICE_TYPE = NULL;
+            fclose(file);
+            return;
+          }
         }
         break;
       }
     }
     fclose(file);
   }
-
+  
   updateIncludeConfVal(logpath, perspath);
 
   if (NULL != DEVICE_TYPE && NULL != PERSISTENT_PATH && NULL != LOG_PATH) {
-    if ( 0 == strcmp("broadband", DEVICE_TYPE) ) {
+    rc = strcmp_s("broadband", strlen("broadband"), DEVICE_TYPE , &ind);
+    ERR_CHK(rc);
+    if((!ind) && (rc == EOK)) {
       char *tmp_seek_file = "/.telemetry/tmp/rtl_";
       char *tmp_log_file = "/";
       char *tmp = NULL;
 
-
-      if (NULL == perspath || strcmp(perspath, "") == 0) {
-        tmp = realloc(PERSISTENT_PATH, strlen(PERSISTENT_PATH) + strlen(tmp_seek_file) + 1 );
+      if (NULL == perspath || perspath[0] == '\0') {
+        length = strlen(PERSISTENT_PATH) + strlen(tmp_seek_file) + 1 ;
+        tmp = realloc(PERSISTENT_PATH,length );
         if (NULL != tmp) {
           PERSISTENT_PATH = tmp;
-          strcat(PERSISTENT_PATH, tmp_seek_file);
+          rc = strcat_s(PERSISTENT_PATH,length, tmp_seek_file);
+          if(rc != EOK)
+          {
+            ERR_CHK(rc);
+            free(PERSISTENT_PATH);
+            PERSISTENT_PATH = NULL;
+            return;
+          }
         } else {
           free(PERSISTENT_PATH);
           PERSISTENT_PATH = NULL;
         }
       }
 
-      if (NULL == logpath || strcmp(logpath, "") == 0) {
-        tmp = realloc(LOG_PATH, strlen(LOG_PATH) + strlen(tmp_log_file) + 1 );
+      if (NULL == logpath || logpath[0] == '\0') {
+        length = strlen(LOG_PATH) + strlen(tmp_log_file) + 1 ;
+        tmp = realloc(LOG_PATH, length );
         if (NULL != tmp) {
           LOG_PATH = tmp;
-          strcat(LOG_PATH, tmp_log_file);
+          rc = strcat_s(LOG_PATH,length, tmp_log_file);
+          if(rc != EOK)
+          {
+            ERR_CHK(rc);  
+            free(LOG_PATH);
+            LOG_PATH = NULL; 
+            return;
+          }
         } else {
           free(LOG_PATH);
           LOG_PATH = NULL;
@@ -456,24 +558,41 @@ void updateConfVal(char *logpath, char *perspath)
       char *tmp_seek_file = DEFAULT_SEEK_PREFIX;
       char *tmp_log_file = DEFAULT_LOG_PATH;
       char *tmp = NULL;
+
       //char *tmp_seek_file = "./tmp/rtl_";
       //char *tmp_log_file = "./logs/";
-      if (NULL == perspath || strcmp(perspath, "") == 0) {
-        tmp = realloc(PERSISTENT_PATH, strlen(tmp_seek_file) + 1 );
+      if (NULL == perspath || perspath[0] == '\0') {
+        length = strlen(tmp_seek_file) + 1;
+        tmp = realloc(PERSISTENT_PATH, length );
         if (NULL != tmp) {
           PERSISTENT_PATH = tmp;
-          strcpy(PERSISTENT_PATH, tmp_seek_file);
+          rc = strcpy_s(PERSISTENT_PATH,length, tmp_seek_file);
+          if(rc != EOK)
+          {
+            ERR_CHK(rc);  
+            free(PERSISTENT_PATH);
+            PERSISTENT_PATH = NULL; 
+            return;
+          }
         } else {
           free(PERSISTENT_PATH);
           PERSISTENT_PATH = NULL;
         }
       }
 
-      if (NULL == logpath || strcmp(logpath, "") == 0) {
-        tmp = realloc(LOG_PATH, strlen(tmp_log_file) + 1 );
+      if (NULL == logpath || logpath[0] == '\0') {
+        length = strlen(tmp_log_file) + 1 ;
+        tmp = realloc(LOG_PATH, length );
         if (NULL != tmp) {
           LOG_PATH = tmp;
-          strcpy(LOG_PATH, tmp_log_file);
+          rc = strcpy_s(LOG_PATH,length, tmp_log_file);
+          if(rc != EOK)
+          {
+            ERR_CHK(rc);  
+            free(LOG_PATH);
+            LOG_PATH = NULL; 
+            return;
+          }
         } else {
           free(LOG_PATH);
           LOG_PATH = NULL;
@@ -496,13 +615,22 @@ void updateConfVal(char *logpath, char *perspath)
 int readLogSeek(char *name, long *seek_value)
 {
   int rc = -1;
+  errno_t ret = -1;
+  int length = 0 ;
   if (NULL != name && NULL != PERSISTENT_PATH) {
     char *seekfile = NULL;
-    seekfile = malloc(strlen(PERSISTENT_PATH) + strlen(name) + 1);
+    length = strlen(PERSISTENT_PATH) + strlen(name) + 1;
+    seekfile = malloc(length);
     if (NULL != seekfile) {
       FILE *fp = NULL;
-      strcpy(seekfile, PERSISTENT_PATH);
-      strcat(seekfile, name);
+	  ret = sprintf_s(seekfile,length, "%s%s", PERSISTENT_PATH,name);
+	  if(ret < EOK)
+	  {
+		 ERR_CHK(ret);
+		 free(seekfile);
+		 return -1;
+	  }
+
       if (NULL != (fp = fopen(seekfile, "r"))) {
           /*Coverity Fix CID:18152 CHECKED_RETURN */
           if( fscanf(fp, "%ld", seek_value) != 1)
@@ -528,19 +656,27 @@ int readLogSeek(char *name, long *seek_value)
  */
 void writeLogSeek(char *name, long seek_value)
 {
+ errno_t rc = -1;
+ int length = 0;
   if (NULL != name && NULL != PERSISTENT_PATH) {
     char *seekfile = NULL;
-    seekfile = malloc(strlen(PERSISTENT_PATH) + strlen(name) + 1);
+    length = strlen(PERSISTENT_PATH) + strlen(name) + 1;
+    seekfile = malloc(length);
     if (NULL != seekfile) {
       FILE *fp = NULL;
-      strcpy(seekfile, PERSISTENT_PATH);
-      strcat(seekfile, name);
+	  rc = sprintf_s(seekfile,length, "%s%s", PERSISTENT_PATH,name);
+	  if(rc< EOK)
+	  {
+		 ERR_CHK(rc);
+		 free(seekfile);
+		 return;
+	  } 
       if (NULL != (fp = fopen(seekfile, "w"))) {
           fprintf(fp, "%ld", seek_value);
           fclose(fp);
       }
       free(seekfile);
-    }
+    }	
   }
 }
 

@@ -36,6 +36,7 @@
 
 //cpu and free memory
 #include <stdio.h>
+#include "safec_lib.h"
 
 #define MAXLEN 512
 
@@ -81,6 +82,9 @@ int getMemoryUsage(char *memoryUtilization)
 	long long  memoryInUse=0;
 	int Total_flag = 0;
 	int Free_flag = 0;
+	errno_t rc = -1;
+	int ind = -1;
+	int mem_total_len = 0, mem_free_len = 0 ;
 
 	/* Open /proc/cpuinfo file*/
 	if ((memoryinfo = fopen("/proc/meminfo", "r")) == NULL)
@@ -89,21 +93,30 @@ int getMemoryUsage(char *memoryUtilization)
 		return 0;
 	}
 
+    mem_total_len = strlen("MemTotal:");
+    mem_free_len =  strlen("MemFree:");
 	/* Search until the "MemTotal" entry is found*/
 	while(fgets(line, MAXLEN, memoryinfo))
 	{
 		sscanf(line, "%512s", tmp);
-		if((strcmp(tmp,"MemTotal:") == 0))
-		{
+        rc = strcmp_s("MemTotal:",mem_total_len,tmp, &ind);
+        ERR_CHK(rc);
+        if((!ind) && (rc == EOK))
+        {
 			sscanf(line, "%*s %512s", tmp);
 			memTotal = atoll(tmp);
 			Total_flag = 1;
-		}
-		else if((strcmp(tmp,"MemFree:") == 0))
-		{
-			sscanf(line, "%*s %512s", tmp);
-			memFree = atoll(tmp);
-			Free_flag = 1;
+        }
+	else
+        {
+           rc = strcmp_s("MemFree:",mem_free_len,tmp, &ind);
+           ERR_CHK(rc);
+           if((!ind) && (rc == EOK))
+           {
+			 sscanf(line, "%*s %512s", tmp);
+			 memFree = atoll(tmp);
+			 Free_flag = 1;
+           }
 		}
 		if (Total_flag == 1 && Free_flag == 1) {
 			break;
@@ -114,7 +127,12 @@ int getMemoryUsage(char *memoryUtilization)
 	memoryInUse = (memTotal - memFree);
 	if(memoryUtilization)
 	{
-		sprintf(memoryUtilization,"%lld",memoryInUse);
+       rc = sprintf_s(memoryUtilization,MAXLEN,"%lld",memoryInUse);
+       if(rc < EOK)
+       {
+         ERR_CHK(rc);
+         return 0;
+       }
 	}
 	else
 	{

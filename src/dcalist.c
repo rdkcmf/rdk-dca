@@ -36,6 +36,7 @@
 
 #include "dcautils.h"
 #include "dcalist.h"
+#include "safec_lib.h"
 
 /*
  * @addtogroup DCA_APIS
@@ -58,20 +59,27 @@ int insertPCNode(GList **pch, char *pattern, char *header, DType_t dtype, int co
 {
   pcdata_t *new = NULL;
   int rc = -1;
+  errno_t ret = -1;
+
   new = (pcdata_t *) malloc(sizeof(*new));
   if (NULL != new) {
     if (pattern != NULL) {
-      new->pattern = (char *) malloc(strlen(pattern) + 1);
-      if (NULL != new->pattern) {
-        strcpy(new->pattern, pattern);
+      new->pattern = strdup(pattern);
+      if (!(new->pattern)) {
+          free(new->pattern);
+          free(new);
+          return rc;
       }
     } else {
       new->pattern = NULL;
     }
     if (header != NULL) {
-      new->header = (char *) malloc(strlen(header) + 1);
-      if (NULL != new->header) {
-        strcpy(new->header, header);
+      new->header = strdup(header);
+      if (!(new->header)) {
+          free(new->header);
+          free(new);
+          return rc;
+
       }
     } else {
       new->header = NULL;
@@ -82,9 +90,11 @@ int insertPCNode(GList **pch, char *pattern, char *header, DType_t dtype, int co
       new->count = count;
     } else if (dtype == STR) {
       if (NULL != data) {
-        new->data = (char *) malloc(strlen(data) + 1);
-        if (NULL != new->data) {
-          strcpy(new->data, data);
+        new->data = strdup(data);
+        if (!(new->data)) {
+            free(new->data);
+            free(new);
+            return rc;
         }
       } else {
         new->data = NULL;
