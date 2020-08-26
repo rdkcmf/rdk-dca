@@ -42,6 +42,7 @@
 #include <fcntl.h>           /* Definition of AT_* constants */
 #include <unistd.h>
 #include <unistd.h>
+#include <math.h>
 #include <ios>
 #include <fstream>
 #include <string>
@@ -89,6 +90,8 @@ int main(int argc,char *argv[]) {
     if (processName != NULL) {  
         memcpy(pInfo.processName, processName, strlen(processName)+1); 
     }
+
+
    
     if(false == getProcInfo(&pInfo))
     {
@@ -359,7 +362,7 @@ int getTotalCpuTimes(int * totalTime)
  * @return  Returns status of operation.
  * @retval  True on success.
  */
-bool getProcessCpuUtilization(int pid, int *procCpuUtil)
+bool getProcessCpuUtilization(int pid, float *procCpuUtil)
 {
 	char cpuUtilizationProc[MAXLEN]={'\0'};
 	procinfo pinfo1;
@@ -401,7 +404,11 @@ bool getProcessCpuUtilization(int pid, int *procCpuUtil)
 	time[1] = t[1];
 	sub1 = total_time_process[1]-total_time_process[0];
 	time1= time[1] - time[0];
-	util = (sub1/time1)*100*no_cpu;
+	//util = (sub1/time1)*100*no_cpu;
+	util = (sub1/time1)*100;
+
+	// round off to 2 decimal points
+	util = roundf(util * 100)/100;
 
 	if(procCpuUtil)
 		*procCpuUtil = util;
@@ -418,7 +425,7 @@ int main(int argc,char *argv[]) {
     procinfo pInfo;
     char command[CMD_LEN] = {'\0'};
     int pid = 0;
-    int cpu = 0;
+    float cpu = 0.0;
     FILE *inFp = NULL;
     int pagesize_kb = 0;
 

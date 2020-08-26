@@ -56,6 +56,9 @@ export RDK_DIR=$BUILDS_DIR
 export PLATFORM_SDK=${RDK_TOOLCHAIN_PATH}
 if [ "$XCAM_MODEL" == "XHB1" ]; then
 source ${RDK_PROJECT_ROOT_PATH}/build/components/sdk/setenv2
+export CFLAGS="-DENABLE_XCAM_SUPPORT"
+export CXXFLAGS=$CFLAGS
+export CPPFLAGS=$CFLAGS
 else
 source $BUILDS_DIR/dca/soc_${RDK_PLATFORM_SOC}_env.sh
 fi
