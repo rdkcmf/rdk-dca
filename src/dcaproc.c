@@ -226,9 +226,8 @@ int getProcUsage(char *processName) {
 int getProcPidStat(int pid, procinfo * pinfo)
 {
   char szFileName [CMD_LEN],szStatStr [2048],*s, *t;
-  FILE *fp;
   struct stat st;
-  int ppid, pgrp, session, tty, tpgid, counter, priority, starttime, signal, blocked, sigignore, sigcatch;
+  int ppid, pgrp, session, tty, tpgid, counter, priority, starttime, signal, blocked, sigignore, sigcatch,fd, read_len;
   char exName [CMD_LEN], state;
   unsigned euid, egid;
   unsigned int flags, minflt, cminflt, majflt, cmajflt, timeout, itrealvalue, vsize, rlim, startcode, endcode, startstack, kstkesp, kstkeip, wchan; 
@@ -240,41 +239,33 @@ int getProcPidStat(int pid, procinfo * pinfo)
   }
 
   sprintf (szFileName, "/proc/%u/stat", (unsigned) pid);
-  if (-1 == access (szFileName, R_OK))
+  if ((fd = open(szFileName, O_RDONLY)) == -1)
   {
     LOG("Unable to access file in get proc info");
     return 0;
   }
 
-  if (-1 != stat (szFileName, &st))
-  {
-    euid = st.st_uid;
-    egid = st.st_gid;
-  } 
-  else
-  {
-    euid = egid = -1;
+  if(-1 != fstat(fd, &st)) {
+        euid = st.st_uid;
+        egid = st.st_gid;
+  }else {
+        euid = egid = -1;
   }
 
-  if ((fp = fopen (szFileName, "r")) == NULL)
-  {
-    LOG("Failed to open file in get process info");
-    return 0;
+  read_len = read(fd, szStatStr, 2047); 
+  if(read_len == -1) {
+        close(fd);
+        return 0;
   }
-
-  if ((s = fgets (szStatStr, 2048, fp)) == NULL)
-  {
-    fclose (fp);
-    return 0;
-  }
+  szStatStr[read_len++] = '\0';
 
   /** pid **/
   s = strchr (szStatStr, '(') + 1;
   t = strchr (szStatStr, ')');
   strncpy (exName, s, t - s);
   exName [t - s] = '\0';
-
-  sscanf (t + 2, "%c %d %d %d %d %d %u %u %u %u %u %d %d %d %d %d %d %u %u %d %u %u %u %u %u %u %u %u %d %d %d %d %u",
+  if(s !=  NULL && t != NULL && (t-s) > 0){
+      sscanf (t + 2, "%c %d %d %d %d %d %u %u %u %u %u %d %d %d %d %d %d %u %u %d %u %u %u %u %u %u %u %u %d %d %d %d %u",
       /*       1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33*/
       &(state),
       &(ppid),
@@ -309,8 +300,8 @@ int getProcPidStat(int pid, procinfo * pinfo)
       &(sigignore),
       &(sigcatch),
       &(wchan));
-
-  fclose (fp);
+}
+  close (fd);
 
   return 1;
 }
@@ -450,7 +441,7 @@ int getCPUInfo(procMemCpuInfo *pInfo)
   //#endif
 #else
   while(fgets(top_op,2048,inFp)!=NULL) {
-    if(sscanf(top_op,"%s %s %s %s %s %s %s %s %s %s", var1, var2, var3, var4, var5, var6, var7, var8, var9, var10) == 10) {
+    if(sscanf(top_op,"%16s %16s %16s %16s %16s %16s %16s %512s %512s %512s", var1, var2, var3, var4, var5, var6, var7, var8, var9, var10) == 10) {
       total_cpu_usage += atoi(var9);
       ret=1;
     }

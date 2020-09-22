@@ -109,13 +109,10 @@ int insertPCNode(GList **pch, char *pattern, char *header, DType_t dtype, int co
 gint comparePattern(gconstpointer np, gconstpointer sp)
 {
   pcdata_t *tmp = (pcdata_t *)np;
-  if (tmp && tmp->pattern)
-  {
-    if (NULL != strstr(sp, tmp->pattern))
-      return 0;
-    else
-      return -1;
-  }
+  if (tmp && tmp->pattern && NULL != strstr(sp, tmp->pattern)) {
+        return 0;
+    }
+  return -1;
 }
 
 /**
@@ -139,7 +136,7 @@ pcdata_t* searchPCNode(GList *pch, char *pattern)
 /**
  * @brief Debug function to print the node.
  *
- * @param[in] data       node data 
+ * @param[in] data       node data
  * @param[in] user_data  user data
  */
 void print_pc_node(gpointer data, gpointer user_data)
@@ -210,4 +207,5 @@ void clearPCNodes(GList **pch)
 
 /** @} */
 /** @} */
-          
+
+  

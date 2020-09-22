@@ -83,7 +83,12 @@ static int fsize(FILE *fp) {
   int prev = ftell(fp);
   fseek(fp, 0L, SEEK_END);
   int sz = ftell(fp);
-  fseek(fp, prev, SEEK_SET);
+  if(prev >= 0)
+  {
+      if(fseek(fp, prev, SEEK_SET) != 0){
+           LOG("Cannot set the file position indicator for the stream pointed to by stream\n");
+      }
+  }
   return sz;
 }
 
@@ -227,14 +232,18 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
 
         if (seek_value <= fileSize)
         {
-          fseek(LOG_FP, seek_value, 0);
+             if(fseek(LOG_FP, seek_value, 0) != 0){
+                 LOG("Cannot set the file position indicator for the stream pointed to by stream\n");
+             }
         }
         else
         {
           if ((NULL != DEVICE_TYPE) && (0 == strcmp("broadband", DEVICE_TYPE)))
           {
             LOG("Telemetry file pointer corrupted");
-            fseek(LOG_FP, 0, 0);
+            if(fseek(LOG_FP, 0, 0) != 0){
+                 LOG("Cannot set the file position indicator for the stream pointed to by stream\n");
+            }
           }
           else
           {
@@ -262,7 +271,9 @@ char *getsRotatedLog(char *buf, int buflen, char *name)
               free(rotatedLog);
               rotatedLog = NULL;
 
-              fseek(LOG_FP, seek_value, 0);
+              if(fseek(LOG_FP, seek_value, 0) != 0){
+                  LOG("Cannot set the file position indicator for the stream pointed to by stream\n");
+              }
               is_rotated_log = 1;
             }
           }
@@ -333,7 +344,7 @@ void updateIncludeConfVal(char *logpath, char *perspath)
   if(NULL != file )
   {
     char props[255] = {""};
-    while(fscanf(file,"%s", props) != EOF )
+    while(fscanf(file,"%255s", props) != EOF )
     {
       char *property = NULL;
       if (property = strstr( props, "PERSISTENT_PATH=")) {
@@ -394,7 +405,7 @@ void updateConfVal(char *logpath, char *perspath)
   if(NULL != file )
   {
     char props[255] = {""};
-    while(fscanf(file,"%s", props) != EOF )
+    while(fscanf(file,"%255s", props) != EOF )
     {
       char *property = NULL;
       if(property = strstr( props, "DEVICE_TYPE="))

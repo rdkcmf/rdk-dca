@@ -71,7 +71,7 @@ int main()
  */
 int getCpuUsage(char * cpuUtil)
 {
-	long double a[10], b[10],usr_cpu,sys_cpu,nic_cpu,idle_cpu, total_time;
+	long double a[10], b[10],usr_cpu,total_time;
 	FILE *fp;
 	char cpuUtilization[MAXLEN]={'\0'};
 	int i=0;
@@ -79,6 +79,10 @@ int getCpuUsage(char * cpuUtil)
 	for(i=0; i<5; i++)
 	{
 		fp = fopen("/proc/stat","r");
+                if(!fp)
+                {
+                        return 0;
+                }
                 /*Coverity Fix CID:18504 CHECKED_RETURN */
 		if( fscanf(fp,"%*s %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf",
 		&a[0],&a[1],&a[2],&a[3],&a[4],&a[5],&a[6],&a[7],&a[8],&a[9]) != 10 )
@@ -104,9 +108,6 @@ int getCpuUsage(char * cpuUtil)
 			(a[0]+a[1]+a[2]+a[3]+a[4]+a[5]+a[6]+a[7]+a[8]+a[9]);
 
 		usr_cpu=((b[0]-a[0])/total_time)*100;
-		sys_cpu=((b[2]-a[2])/total_time)*100;
-		nic_cpu=((b[1]-a[1])/total_time)*100;
-		idle_cpu=((b[3]-a[3])/total_time)*100;
 
 		sprintf(cpuUtilization,"%Lf",usr_cpu);
 	}
@@ -122,7 +123,6 @@ int getCpuUsage(char * cpuUtil)
 		return 0;
 	}
 }
-
 /** @} */  //END OF GROUP DCA_APIS
 
 /** @} */

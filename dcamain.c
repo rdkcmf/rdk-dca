@@ -30,7 +30,6 @@
  *  @return parseFile() function return code
  */
 int main(int argc, char *argv[]) {
-  int rc = -1 ;
   displayLogGrepResults(argc, argv);
   return 0;
 }
