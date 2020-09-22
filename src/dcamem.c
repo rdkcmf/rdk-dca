@@ -92,16 +92,16 @@ int getMemoryUsage(char *memoryUtilization)
 	/* Search until the "MemTotal" entry is found*/
 	while(fgets(line, MAXLEN, memoryinfo))
 	{
-		sscanf(line, "%s", tmp);
+		sscanf(line, "%512s", tmp);
 		if((strcmp(tmp,"MemTotal:") == 0))
 		{
-			sscanf(line, "%*s %s", tmp);
+			sscanf(line, "%*s %512s", tmp);
 			memTotal = atoll(tmp);
 			Total_flag = 1;
 		}
 		else if((strcmp(tmp,"MemFree:") == 0))
 		{
-			sscanf(line, "%*s %s", tmp);
+			sscanf(line, "%*s %512s", tmp);
 			memFree = atoll(tmp);
 			Free_flag = 1;
 		}

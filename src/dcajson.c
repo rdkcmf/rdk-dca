@@ -96,7 +96,7 @@ void clearSearchResultJson(cJSON **root)
  *
  * @return Returns the status of the operation. 
  */
-int printJson(cJSON *root)
+void printJson(cJSON *root)
 {
     if (NULL != root) {
       char *out = cJSON_PrintUnformatted(root);

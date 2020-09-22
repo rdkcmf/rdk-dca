@@ -130,9 +130,8 @@ static void appendData( pcdata_t* dst, const char* src)
 
   int dst_len, src_len = 0;
 
+
   src_len = strlen(src) + 1;
-
-
   //Copy data
   if(NULL == dst->data) {
     if((dst->data = strndup(src, src_len)) == NULL)
@@ -272,6 +271,7 @@ int addToJson(GList *pchead)
     }
     tlist = g_list_next(tlist);
   }
+return 0;
 }
 
 /**
@@ -529,7 +529,7 @@ char *strSplit(char *str, char *delim) {
  *
  * @return Returns status of operation.
  */
-int getDType(char *filename, char *header, DType_t *dtype)
+void getDType(char *filename, char *header, DType_t *dtype)
 {
   if (NULL != header) {
     if (NULL != strstr(header, "split")) {

@@ -93,7 +93,7 @@ void saveExecCounter(void);
 void initSearchResultJson(cJSON **root, cJSON **sr);
 void addToSearchResult(char *key, char *value);
 void clearSearchResultJson(cJSON **root);
-int printJson(cJSON *root);
+void printJson(cJSON *root);
 
 int getProcUsage(char *processName);
 
