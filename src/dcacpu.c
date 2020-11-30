@@ -37,6 +37,8 @@
 //cpu and free memory
 #include <stdio.h>
 #include "safec_lib.h"
+#include <string.h>
+#include <unistd.h>
 
 #define MAXLEN 512
 

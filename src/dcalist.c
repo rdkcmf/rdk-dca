@@ -59,8 +59,7 @@ int insertPCNode(GList **pch, char *pattern, char *header, DType_t dtype, int co
 {
   pcdata_t *new = NULL;
   int rc = -1;
-  errno_t ret = -1;
-
+  
   new = (pcdata_t *) malloc(sizeof(*new));
   if (NULL != new) {
     if (pattern != NULL) {
@@ -151,6 +150,7 @@ pcdata_t* searchPCNode(GList *pch, char *pattern)
  */
 void print_pc_node(gpointer data, gpointer user_data)
 {
+  UNREFERENCED_PARAMETER(user_data);
   pcdata_t *node = (pcdata_t *)data;
   if (node) {
     LOG("node pattern:%s, header:%s", node->pattern, node->header);

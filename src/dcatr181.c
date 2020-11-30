@@ -35,7 +35,7 @@
 #ifdef TR181_DEBUG
 #define print_message(...) LOG(__VA_ARGS__)
 #else
-#define print_message
+#define print_message(...)
 #endif
 
 
@@ -71,7 +71,7 @@ int ccsp_handler_init()
 
    if ( NULL == ccsp_bus_handle )
    {
-       ret = CCSP_Message_Bus_Init(CCSP_BUS_CLIENT, CCSP_BUS_CFG, &ccsp_bus_handle, Ansc_AllocateMemory_Callback, Ansc_FreeMemory_Callback);
+       ret = CCSP_Message_Bus_Init(CCSP_BUS_CLIENT, CCSP_BUS_CFG, &ccsp_bus_handle, (CCSP_MESSAGE_BUS_MALLOC)Ansc_AllocateMemory_Callback, Ansc_FreeMemory_Callback);
        if ( 0 != ret )
        {
            print_message("[%s]:CCSP_Message_Bus_Init() failed ret_val = %d\n", __FUNCTION__, ret);
@@ -100,6 +100,7 @@ void ccsp_handler_exit()
  */
 int get_tr181param_value( const char* path_namespace, char* parm_value, int len)
 {
+    UNREFERENCED_PARAMETER(len);
     int ret = 0;
     int comp_size = 0;
     int val_size = 0;
@@ -126,7 +127,7 @@ int get_tr181param_value( const char* path_namespace, char* parm_value, int len)
 
     dst_compid = components[0]->componentName;
     dst_pathname = components[0]->dbusPath;
-    parameter_name[0] = path_namespace;
+    parameter_name[0] = (char*)path_namespace;
 
     /* Get values of tr181 object */
     ret = CcspBaseIf_getParameterValues(ccsp_bus_handle, dst_compid, dst_pathname, parameter_name, 1, &val_size, &param_val);

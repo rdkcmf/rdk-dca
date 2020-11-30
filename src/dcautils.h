@@ -74,7 +74,15 @@ extern int CUR_EXEC_COUNT;
 extern long LAST_SEEK_VALUE;
 
 //#define LOG(fmt,__etc...) fprintf(stderr, "%s(%s:%d) "fmt"\n", __FUNCTION__, __FILE__, (int)__LINE__, ##__etc);fflush(stdout);
-#define LOG(fmt,__etc...) fprintf(stderr, fmt"\n", ##__etc);fflush(stdout);
+#define LOG(fmt,__etc...)              \
+{                                      \
+    fprintf(stderr, fmt"\n", ##__etc); \
+    fflush(stdout);                    \
+}
+
+#ifndef UNREFERENCED_PARAMETER
+#define UNREFERENCED_PARAMETER(_p_)  (void)(_p_)
+#endif
 
 /* utility functions */
 int getLoadAvg(void);

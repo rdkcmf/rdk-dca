@@ -376,7 +376,6 @@ EXIT:
 void updateIncludeConfVal(char *logpath, char *perspath)
 {
   errno_t rc = -1;
-  int ind = -1;
   int p_path_len = -1, log_path_len = -1;
   FILE *file = fopen( INCLUDE_PROPERTIES, "r");
   if(NULL != file )
@@ -387,7 +386,7 @@ void updateIncludeConfVal(char *logpath, char *perspath)
     while(fscanf(file,"%255s", props) != EOF )
     {
       char *property = NULL;
-      if (property = strstr( props, "PERSISTENT_PATH=")) {
+      if ((property = strstr( props, "PERSISTENT_PATH="))) {
         property = property + p_path_len;
         PERSISTENT_PATH = malloc(strlen(property) + 1);
         if (NULL != PERSISTENT_PATH) {
@@ -401,7 +400,7 @@ void updateIncludeConfVal(char *logpath, char *perspath)
             return;
           }
         }
-      } else if (property = strstr( props, "LOG_PATH=")) {
+      } else if ((property = strstr( props, "LOG_PATH="))) {
         if ( 0 == strncmp(props, "LOG_PATH=", log_path_len) ) {
           property = property + log_path_len;
           LOG_PATH = malloc(strlen(property) + 1);
@@ -484,7 +483,7 @@ void updateConfVal(char *logpath, char *perspath)
     {
       char *property = NULL;
       length = 0;
-      if(property = strstr( props, "DEVICE_TYPE="))
+      if((property = strstr( props, "DEVICE_TYPE=")))
       {
         property = property + device_type_len;
         length = strlen(property) + 1;
@@ -633,8 +632,9 @@ int readLogSeek(char *name, long *seek_value)
 
       if (NULL != (fp = fopen(seekfile, "r"))) {
           /*Coverity Fix CID:18152 CHECKED_RETURN */
-          if( fscanf(fp, "%ld", seek_value) != 1)
+          if( fscanf(fp, "%ld", seek_value) != 1) {
              LOG("Error in fscanf()\n");
+          }
  
           fclose(fp);
           rc = 0;

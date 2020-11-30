@@ -148,6 +148,8 @@ long LAST_SEEK_VALUE = 0;
  */
 int processTopPattern(char *logfile, GList *pchead, int pcIndex)
 {
+  UNREFERENCED_PARAMETER(logfile);
+  UNREFERENCED_PARAMETER(pcIndex);
   GList *tlist = pchead;
   pcdata_t *tmp = NULL;
   while (NULL != tlist) {
@@ -189,7 +191,9 @@ static void appendData( pcdata_t* dst, const char* src)
   //Copy data
   if(NULL == dst->data) {
     if((dst->data = strdup(src)) == NULL)
+    {
       LOG("Failed to allocate memory for telemetry node data\n");
+    }
   } else { //Append data
     dst_len = strlen(dst->data) + 1;
     dst->data = (char*)realloc(dst->data, dst_len+src_len);
@@ -220,6 +224,8 @@ static void appendData( pcdata_t* dst, const char* src)
  */
 static int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
 {
+  UNREFERENCED_PARAMETER(logfile);
+  UNREFERENCED_PARAMETER(pcIndex);
   int ret_val, length, obj_count, i = 0;
   GList *tlist = NULL;
   pcdata_t *tmp = NULL;
@@ -480,7 +486,6 @@ int handleRDKErrCodes(GList **rdkec_head, char *line)
   char err_code[20] = {0}, rdkec[20] = {0};
   pcdata_t *tnode = NULL;
   errno_t rc = -1;
-  int ind = -1;
   getErrorCode(line, err_code, sizeof(err_code));
 
   if (err_code[0] != '\0') {
@@ -516,6 +521,7 @@ int handleRDKErrCodes(GList **rdkec_head, char *line)
  */
 int processCountPattern(char *logfile, GList *pchead, int pcIndex, GList **rdkec_head)
 {
+  UNREFERENCED_PARAMETER(pcIndex);
   char temp[MAXLINE];
 
   while (getsRotatedLog(temp, MAXLINE, logfile) != NULL ) {
@@ -682,8 +688,6 @@ char *strSplit(char *str, char *delim) {
  */
 void getDType(char *filename, char *header, DType_t *dtype)
 {
-errno_t rc = -1;
-int ind = -1;
 enum logType_e             type;
 
 if (NULL != header) {
@@ -750,7 +754,6 @@ int parseFile(char *fname)
     char *temp_skip_interval = strSplit(NULL, DELIMITER);
     int tmp_skip_interval, is_skip_param;
     DType_t dtype;
-	int file_len = 0;
 
     if (NULL == temp_file || NULL == temp_pattern || NULL == temp_header || NULL == temp_skip_interval)
       continue;

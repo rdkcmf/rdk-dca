@@ -116,7 +116,6 @@ int getProcUsage(char *processName) {
     int index = 0;
     pid_t *pid = NULL;
     pid_t *temp = NULL;
-    errno_t rc = -1;
     int cpu_key_length = 0, mem_key_length = 0;
 
     /*
@@ -291,10 +290,10 @@ int getProcUsage(char *processName) {
 int getProcPidStat(int pid, procinfo * pinfo)
 {
   char szFileName [CMD_LEN],szStatStr [2048],*s, *t;
-  struct stat st;
+  //struct stat st;
   int ppid, pgrp, session, tty, tpgid, counter, priority, starttime, signal, blocked, sigignore, sigcatch,fd, read_len;
   char exName [CMD_LEN], state;
-  unsigned euid, egid;
+  //unsigned euid, egid;
   unsigned int flags, minflt, cminflt, majflt, cmajflt, timeout, itrealvalue, vsize, rlim, startcode, endcode, startstack, kstkesp, kstkeip, wchan; 
   errno_t rc = -1;
 
@@ -317,12 +316,14 @@ int getProcPidStat(int pid, procinfo * pinfo)
     return 0;
   }
 
+#if 0
   if(-1 != fstat(fd, &st)) {
         euid = st.st_uid;
         egid = st.st_gid;
   }else {
         euid = egid = -1;
   }
+#endif
 
   read_len = read(fd, szStatStr, 2047); 
   if(read_len == -1) {
@@ -610,8 +611,10 @@ int getTotalCpuTimes(int * totalTime)
   /*Coverity Fix CID:109162 CHECKED_RETURN */
   if(fscanf(fp,"%*s %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf %Lf",
       &a[0],&a[1],&a[2],&a[3],&a[4],&a[5],&a[6],&a[7],&a[8],&a[9]) != 10 )
+  {
              LOG("Failed in fscanf()\n");
-       
+  }
+     
   fclose(fp);
   total = (a[0]+a[1]+a[2]+a[3]+a[4]+a[5]+a[6]+a[7]+a[8]+a[9]);
   *totalTime = total;
@@ -631,7 +634,7 @@ int getTotalCpuTimes(int * totalTime)
 int getProcessCpuUtilization(int pid, float *procCpuUtil)
 {
   procinfo pinfo1;
-  int no_cpu;
+  //int no_cpu;
   float total_time_process[2],time[2];
   int t[2];
   float sub1;
@@ -639,7 +642,7 @@ int getProcessCpuUtilization(int pid, float *procCpuUtil)
   float util=0;
 
 
-  no_cpu=sysconf(_SC_NPROCESSORS_ONLN);
+  sysconf(_SC_NPROCESSORS_ONLN);
   if( 0 == getProcPidStat(pid, &pinfo1))
     return 0;
 
