@@ -398,8 +398,10 @@ int getIPVideo(char *line, pcdata_t *pcnode)
             return 0 ; 
 
         if ( vlen > 0 ) {
-          if (NULL == pcnode->data)
+          if (NULL == pcnode->data){
               pcnode->data = (char *) malloc(MAXLINE);
+              memset(pcnode->data, '\0', MAXLINE);
+          }
 
           if (NULL == pcnode->data)
               return (-1);
