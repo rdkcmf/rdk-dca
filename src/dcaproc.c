@@ -107,6 +107,7 @@ int getProcUsage(char *processName) {
   if (processName != NULL) {
     procMemCpuInfo pInfo = { 0 };
     char pidofCommand[PIDOF_SIZE];
+    char psCommand[CMD_LEN];
     FILE *cmdPid;
     char *mem_key = NULL, *cpu_key = NULL;
     int ret = 0;
@@ -174,18 +175,65 @@ int getProcUsage(char *processName) {
 		pclose(cmdPid);
     #endif
 
-
-    // If pidof command output is empty
+    // Pidof command output is empty
     if ((*pid) <= 0)
     {
-        free(pid);
-        return 0;
+        // pidof was empty, see if we can grab the pid via ps
+        sprintf(psCommand, "ps ax | grep -v grep | grep %s | awk '{ print $1 }'", processName);
+
+#ifdef LIBSYSWRAPPER_BUILD
+        if (!(cmdPid = v_secure_popen("r", "ps ax | grep -v grep | grep %s | awk '{ print $1 }'", processName)))
+#else
+        if (!(cmdPid = popen(psCommand, "r")))
+#endif
+        {
+            LOG("Failed to execute %s", psCommand);
+            return 0;
+        }
+
+        *pid=0;
+        index=0;
+        while(fscanf(cmdPid,"%d",(pid+index)) == 1)
+        {
+            if ((*(pid+index)) <= 0)
+            {
+                continue;
+            }
+            index++;
+            temp = (pid_t *) realloc (pid,((index+1)*sizeof(pid_t)) );
+            if ( NULL == temp )
+            {
+                free(pid);
+#ifdef LIBSYSWRAPPER_BUILD
+                v_secure_pclose(cmdPid);
+#else
+                pclose(cmdPid);
+#endif
+                return 0;
+            }
+            pid=temp;
+        }
+
+    #ifdef LIBSYSWRAPPER_BUILD
+		v_secure_pclose(cmdPid);
+    #else
+		pclose(cmdPid);
+    #endif
+
+        // If pidof command output is empty
+        if ((*pid) <= 0)
+        {
+            LOG("Failed to get pid for %s", processName);
+            free(pid);
+            return 0;
+        }
     }
 
     pInfo.total_instance=index;
     pInfo.pid=pid;
 
     if (getProcInfo(&pInfo) == 0) {
+         LOG("Failed to get procInfo for %s", processName);
          return 0;
     }
 
