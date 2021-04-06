@@ -502,6 +502,24 @@ int getCPUInfo(procMemCpuInfo *pInfo)
       return 0;
     }
   }
+
+#elif AMLOGIC
+  if ( 1 == cmd_option ) {
+    rc = sprintf_s(command,sizeof(command),"COLUMNS=1000 top -b -n 1 -c | grep -v grep | grep -i '%s'", pInfo->processName);
+    if(rc < EOK)
+    {
+      ERR_CHK(rc);
+      return 0;
+    }
+  } else {
+    rc = sprintf_s(command,sizeof(command),"COLUMNS=1000 top -b -n 1 | grep -i '%s'", pInfo->processName);
+    if(rc < EOK)
+    {
+      ERR_CHK(rc);
+      return 0;
+    }
+  }
+
 #else 
   /* ps -C Receiver -o %cpu -o %mem */
   //sprintf(command, "ps -C '%s' -o %%cpu -o %%mem | sed 1d", pInfo->processName);
