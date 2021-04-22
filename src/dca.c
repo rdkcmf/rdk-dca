@@ -67,6 +67,9 @@
 #define NOE strlen("NumberOfEntries")
 #endif
 
+// Using same error code used by safeclib for buffer overflow for easy metrics collection
+#define INVALID_COUNT "-406"
+
 
 #define NUM_OF_LOG_TYPES (sizeof(log_type_table)/sizeof(log_type_table[0]))
 
@@ -124,6 +127,7 @@ char *DEVICE_TYPE = NULL;
 cJSON *SEARCH_RESULT_JSON = NULL, *ROOT_JSON = NULL;
 int CUR_EXEC_COUNT = 0;
 long LAST_SEEK_VALUE = 0;
+
 
 /* @} */ // End of group DCA_TYPES
 
@@ -290,7 +294,7 @@ static int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
                     if(rc < EOK)
                     {
                       ERR_CHK(rc);
-                      return 1;
+                      continue ;
                     }
 
                     ret_val = sprintf_s(tr181obj_buff+length, bufflength-length,"%d%s", i, (tmp->pattern + length + DELIMITER_SIZE));
@@ -344,14 +348,15 @@ int addToJson(GList *pchead)
         {
           if (tmp->d_type == INT) {
             if (tmp->count != 0) {
-              char tmp_str[5] = {0};
+              char tmp_str[5] = {'\0'};
               rc = sprintf_s(tmp_str,sizeof(tmp_str),"%d", tmp->count);
               if(rc < EOK)
               {
                 ERR_CHK(rc);
-                return -1;
+                addToSearchResult(tmp->header, INVALID_COUNT);
+              }else {
+                addToSearchResult(tmp->header, tmp_str);
               }
-              addToSearchResult(tmp->header, tmp_str);
             }
           } else if(tmp->d_type == STR) {
             if ((NULL != tmp->data) && !((tmp->data[0] == '0') && (tmp->data[1] == '\0'))) {
@@ -446,7 +451,7 @@ int getErrorCode(char *str, char *ec, int ec_length)
               if(rc != EOK)
               {
                 ERR_CHK(rc);
-                return -1;
+                continue;
               }
             }
             break;
