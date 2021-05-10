@@ -107,7 +107,9 @@ int getProcUsage(char *processName) {
   if (processName != NULL) {
     procMemCpuInfo pInfo = { 0 };
     char pidofCommand[PIDOF_SIZE];
+#if defined (ENABLE_PS_PROCESS_SEARCH)
     char psCommand[CMD_LEN];
+#endif
     FILE *cmdPid;
     char *mem_key = NULL, *cpu_key = NULL;
     int ret = 0;
@@ -175,6 +177,7 @@ int getProcUsage(char *processName) {
 		pclose(cmdPid);
     #endif
 
+#if defined (ENABLE_PS_PROCESS_SEARCH) 
     // Pidof command output is empty
     if ((*pid) <= 0)
     {
@@ -187,7 +190,6 @@ int getProcUsage(char *processName) {
         if (!(cmdPid = popen(psCommand, "r")))
 #endif
         {
-            LOG("Failed to execute %s", psCommand);
             return 0;
         }
 
@@ -223,11 +225,18 @@ int getProcUsage(char *processName) {
         // If pidof command output is empty
         if ((*pid) <= 0)
         {
-            LOG("Failed to get pid for %s", processName);
             free(pid);
             return 0;
         }
     }
+#else
+    // If pidof command output is empty
+    if ((*pid) <= 0)
+    {
+        free(pid);
+        return 0;
+    }
+#endif
 
     pInfo.total_instance=index;
     pInfo.pid=pid;
