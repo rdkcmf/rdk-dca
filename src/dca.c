@@ -70,6 +70,7 @@
 // Using same error code used by safeclib for buffer overflow for easy metrics collection
 #define INVALID_COUNT "-406"
 
+#define LOG_FILE "dcmscript.log"
 
 #define NUM_OF_LOG_TYPES (sizeof(log_type_table)/sizeof(log_type_table[0]))
 
@@ -540,7 +541,8 @@ int processCountPattern(char *logfile, GList *pchead, int pcIndex, GList **rdkec
         }
       }
     } else {
-      if (NULL != strstr(temp, "RDK-")) {
+
+      if (NULL != strstr(temp, "RDK-") && ( 0 != strncmp(logfile, LOG_FILE, MAXLINE))) {
         handleRDKErrCodes(rdkec_head, temp);
       }
     }
