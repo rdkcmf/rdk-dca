@@ -227,7 +227,7 @@ static int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
 {
   UNREFERENCED_PARAMETER(logfile);
   UNREFERENCED_PARAMETER(pcIndex);
-  int ret_val, length, obj_count, i = 0;
+  int ret_val,length, obj_count, i = 0;
   GList *tlist = NULL;
   pcdata_t *tmp = NULL;
   char tr181data_buff[TR181BUF_LENGTH];
@@ -278,34 +278,35 @@ static int processTr181Objects(char *logfile, GList *pchead, int pcIndex)
             if(NULL == tck) {
               //Get NumberOfEntries of a multi-instance object
               length = first_tck - tmp->pattern;
-              rc = sprintf_s(tr181obj_buff,sizeof(tr181obj_buff), tmp->pattern);
-              if(rc < EOK)
-              {
-                ERR_CHK(rc);
-                return 1;
-              }
-              rc = strcat_s(tr181obj_buff,sizeof(tr181obj_buff),"NumberOfEntries");
+              rc = strncpy_s(tr181obj_buff,sizeof(tr181obj_buff),tmp->pattern,(length-1));
               if(rc != EOK)
               {
                 ERR_CHK(rc);
                 return 1;
               }
+              tr181obj_buff[length-1] = '\0';
+              rc = strcat_s(tr181obj_buff,sizeof(tr181obj_buff),"NumberOfEntries");
+              if(rc != EOK)
+              {
+                ERR_CHK(rc);
+                return 1;
+              }         
               ret_val = get_tr181param_value(tr181obj_buff, tr181data_buff, TR181BUF_LENGTH);
               if(0 == ret_val) {
-                obj_count = atoi(tr181data_buff);
+                obj_count = atoi(tr181data_buff);           
                 //Collect all all instance value of a object
                 if(obj_count > 0) {
                   for(i=1; i<=obj_count; i++) {
                     //Replace multi-instance token with an object instance number
-                    rc = sprintf_s(tr181obj_buff,sizeof(tr181obj_buff), tmp->pattern);
-                    if(rc < EOK)
+                    rc = strncpy_s(tr181obj_buff,sizeof(tr181obj_buff),tmp->pattern,length);
+                    if(rc != EOK)
                     {
-                      ERR_CHK(rc);
-                      continue ;
+                        ERR_CHK(rc);
+                        continue ;
                     }
-
+                    tr181obj_buff[length] = '\0';
                     ret_val = sprintf_s(tr181obj_buff+length, bufflength-length,"%d%s", i, (tmp->pattern + length + DELIMITER_SIZE));
-                    if(ret_val < EOK ||(ret_val >= (bufflength-length)))
+                    if (ret_val < EOK || ret_val >= (bufflength-length)) 
                     {
                       ERR_CHK(ret_val);
                       LOG("Error: Buffer overflow - return value:%d", ret_val);
