@@ -24,6 +24,22 @@ LT_INIT
 LIBSYSWRAPPER_FLAG=" "
 IS_LIBSYSWRAPPER_ENABLED=" "
 
+GTEST_ENABLE_FLAG = ""
+
+AC_ARG_ENABLE([gtestapp],
+             AS_HELP_STRING([--enable-gtestapp],[enable Gtest support (default is no)]),
+             [
+               case "${enableval}" in
+                yes) GTEST_SUPPORT_ENABLED=true
+                     GTEST_ENABLE_FLAG="-DGTEST_ENABLE"
+                     m4_if(m4_sysval,[0],[AC_CONFIG_FILES([src/test/Makefile])]);;
+                no) GTEST_SUPPORT_ENABLED=false AC_MSG_ERROR([Gtest support is disabled]);;
+                 *) AC_MSG_ERROR([bad value ${enableval} for --enable-gtestapp ]);;
+               esac
+             ],
+             [echo "Gtestapp is disabled"])
+AM_CONDITIONAL([WITH_GTEST_SUPPORT], [test x$GTEST_SUPPORT_ENABLED = xtrue])
+
 dnl Checks for programs.
 AC_PROG_CXX
 AC_PROG_CC
@@ -87,4 +103,5 @@ AM_CONDITIONAL([ENABLE_TR181_MESSAGEBUS], [test x$ENABLE_TR181_MESSAGEBUS = xtru
 
 AC_CONFIG_FILES([Makefile
                  src/Makefile])
+AC_SUBST(GTEST_ENABLE_FLAG)
 AC_OUTPUT

@@ -36,3 +36,7 @@ endif
 
 dcamem_SOURCES = dcamem.c
 dcacpu_SOURCES = dcacpu.c
+
+if WITH_GTEST_SUPPORT
+SUBDIRS += test
+endif
