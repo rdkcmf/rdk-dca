@@ -38,9 +38,9 @@ LIBS += -L$(GLIB_CONFIG_PATH) \
 
 LDFLAGS += $(LIBS)
 CFLAGS += $(INCLUDE)
-CFLAGS += -DSAFEC_DUMMY_API
-
-
+ifneq ($(XHC1),true)
+    CFLAGS += -DSAFEC_DUMMY_API
+endif
 
 all:src/dca.c
 	$(CC) $(CFLAGS) $(LDFLAGS)  src/dca.c src/dcalist.c src/dcajson.c src/dcaproc.c src/dcautils.c -o dca
